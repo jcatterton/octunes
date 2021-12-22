@@ -1,0 +1,17 @@
+{
+  "name": "octunes_node",
+  "version": "1.0.0",
+  "description": "Octopals discord music bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^11.6.4",
+    "opusscript": "0.0.8",
+    "yt-search": "^2.10.2",
+    "ytdl-core": "^4.9.2"
+  }
+}
