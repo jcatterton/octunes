@@ -11,6 +11,7 @@ const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
 
 let servers = {};
 let server;
+let startTimeOfCurrentSong;
 
 bot.on('ready', () => {
     console.log("bot is online");
@@ -51,16 +52,10 @@ bot.on('message', msg => {
                 }
                 break;
             case "queue":
-                if (server.queue.length === 0) {
-                    msg.channel.sendMessage("This shit empty, YEET!")
-                } else {
-                    const queueReply = server.queue.map(function(i) { return i.title });
-                    queueReply[0] = queueReply[0] + " (Now playing)"
-                    msg.channel.sendMessage(queueReply);
-                }
+                outputQueue(msg);
                 break;
             case "now-playing":
-                msg.channel.sendMessage("Currently playing " + server.queue[0].title);
+                msg.channel.sendMessage("Currently playing " + server.queue[0].link + ", length is: " + convertSecondsToMinutes(server.queue[0].length) + " remaining time is: " + convertSecondsToMinutes(server.queue[0].length - ((Date.now() - startTimeOfCurrentSong)/1000)));
                 break;
             case "help":
                 helpOptions(msg);
@@ -104,6 +99,8 @@ function playSong(msg, args) {
         ytSearch.search(query).then(
             response => {
                 addToQueue(msg, response.all[0].url);
+            }, err => {
+                console.log(err);
             }
         );
     } else {
@@ -119,7 +116,8 @@ function addToQueue(msg, songLink) {
                     {
                         "title": response.videoDetails.title,
                         "runTime": response.videoDetails.lengthSeconds,
-                        "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                        "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                        "length": response.videoDetails.lengthSeconds
                     }
                 );
             } else {
@@ -127,25 +125,26 @@ function addToQueue(msg, songLink) {
                     {
                         "title": response.videoDetails.title,
                         "runTime": response.videoDetails.lengthSeconds,
-                        "link": songLink
+                        "link": songLink,
+                        "length": response.videoDetails.lengthSeconds
                     }
                 );
             }
 
             if (server.queue.length > 1) {
                 let totalQueueLength = 0;
-                for (let i = 1; i < server.queue.length; i++) {
+                for (let i = 1; i < server.queue.length - 1; i++) {
                     totalQueueLength += parseInt(server.queue[i].runTime, 10);
                 }
-
-                const minutes = parseInt(totalQueueLength / 60);
-                const seconds = totalQueueLength % 60
+                totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong)/1000);
 
                 const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
                     "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
-                    minutes + " minutes, " + seconds + " seconds.");
+                    convertSecondsToMinutes(totalQueueLength));
 
                 msg.channel.sendMessage(reply);
+            } else {
+                msg.channel.sendMessage("Now playing " + server.queue[0].title);
             }
 
             if (!msg.guild.voiceConnection) {
@@ -153,11 +152,14 @@ function addToQueue(msg, songLink) {
                     play(connection, msg, server);
                 });
             }
+        }, err => {
+            console.log(err);
         }
     )
 }
 
 function play(connection, msg, server) {
+    startTimeOfCurrentSong = Date.now();
     server.dispatcher = connection.playStream(ytdl(server.queue[0].link, { filter: "audioonly"}));
     server.dispatcher.on("end", function() {
        server.queue.shift();
@@ -167,6 +169,20 @@ function play(connection, msg, server) {
            connection.disconnect();
        }
     });
+}
+
+function outputQueue(msg) {
+    if (server.queue.length === 0) {
+        msg.channel.sendMessage("This shit empty, YEET!")
+    } else {
+        const queueReply = server.queue.map(
+            function(i) {
+                return (server.queue.indexOf(i) + ". " + i.title);
+            }
+        );
+        queueReply[0] = ":point_right: " + server.queue[0].title + " (Now playing)"
+        msg.channel.sendMessage(queueReply);
+    }
 }
 
 function isValidHttpUrl(string) {
@@ -179,4 +195,8 @@ function isValidHttpUrl(string) {
     }
 
     return url.protocol === "http:" || url.protocol === "https:";
+}
+
+function convertSecondsToMinutes(seconds) {
+    return parseInt(seconds / 60) + " minutes, " + parseInt(seconds % 60) + " seconds";
 }
