@@ -57,8 +57,22 @@ bot.on('message', msg => {
             case "now-playing":
                 msg.channel.sendMessage("Currently playing " + server.queue[0].link + ", length is: " + convertSecondsToMinutes(server.queue[0].length) + " remaining time is: " + convertSecondsToMinutes(server.queue[0].length - ((Date.now() - startTimeOfCurrentSong)/1000)));
                 break;
+            case "remove":
+                if (!args[1]) {
+                    msg.channel.send("Which song should I remove? :thinking:")
+                } else {
+                    try {
+                        msg.channel.send(server.queue.splice(args[1], 1)[0].title + " removed from the queue.");
+                    } catch {
+                        msg.channel.send("Invalid index provided. Learn you count, ya dingus.")
+                    }
+                }
+                break;
             case "help":
                 helpOptions(msg);
+                break;
+            case "info":
+                msg.channel.send("I am Octunes™, Discord music bot developed by Sovaros™.\n\nI'm a capable of playing a direct link from YouTube, or searching YouTube for a video based on provided keywords. Try typing '!help' for more information on my commands.\n\nOctunes was written in Javascript, Sovaros 2020 All Rights Reserved... or something like that.")
                 break;
             default:
                 msg.reply("I don't recognize that command. Try '!help' if you're having trouble.")
@@ -69,7 +83,7 @@ bot.on('message', msg => {
 bot.login(token);
 
 function helpOptions(msg) {
-    const response = `Octunes help menu\n\nAll commands must start with '!'\n\nCommands:\n- !play {link} - Plays song from provided youtube link.\n- !play {keywords} - Searches youtube based on your keywords and plays first result.\n- !skip - Skips currently playing song\n- !stop - Stops playback and removes songs from queue\n- !queue - Lists the current queue of songs\n- !now-playing - States the currently playing song\n\nAny bugs? Tell Sova!`
+    const response = `Octunes help menu\n\nAll commands must start with '!'\n\nCommands:\n- !play {link} - Plays song from provided youtube link.\n- !play {keywords} - Searches youtube based on your keywords and plays first result.\n- !skip - Skips currently playing song\n- !stop - Stops playback and removes songs from queue\n- !queue - Lists the current queue of songs\n- !now-playing - States the currently playing song\n- !remove {index} - Removes a song from the queue, use the index provided by the !queue operation.\n\nAny bugs? Tell Sova!`
 
     msg.author.sendMessage(response)
 }
@@ -98,9 +112,9 @@ function playSong(msg, args) {
         }
         ytSearch.search(query).then(
             response => {
-                addToQueue(msg, response.all[0].url);
+                addToQueue(msg, response.videos[0].url);
             }, err => {
-                console.log(err);
+                console.log("Error conducting search: " + err);
             }
         );
     } else {
@@ -153,7 +167,7 @@ function addToQueue(msg, songLink) {
                 });
             }
         }, err => {
-            console.log(err);
+            console.log("Error adding to queue: " + err);
         }
     )
 }
