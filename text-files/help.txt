@@ -1,0 +1,17 @@
+Octunes help menu
+
+All commands must start with '!'
+
+Commands:
+- !play or !pl {link} - Plays song from provided youtube link.
+- !play or !pl {keywords} - Searches youtube based on your keywords and plays first result.
+- !skip or !sk - Skips currently playing song.
+- !stop or !st - Stops playback and removes songs from queue.
+- !queue or !q - Lists the current queue of songs.
+- !nowplaying or !np - States the currently playing song.
+- !remove or !rm {index} - Removes a song from the queue, use the index provided by the !queue operation.
+- !pause or !ps - Pauses the currently playing song.
+- !resume or !rs - Resumes the currently playing song, if it is paused.
+- !info or !i - Bot info
+
+Any bugs? Tell Sova!

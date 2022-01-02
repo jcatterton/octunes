@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="$(cat version)"
+VERSION="$(cat version.txt)"
 CHART_REF="octunes"
 
 CONTEXT="$(kubectl config current-context)"

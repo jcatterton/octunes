@@ -1,0 +1,5 @@
+I am Octunes™ (v<<version>>), Discord music bot developed by Sovaros™.
+
+I'm capable of playing a direct link from YouTube, or searching YouTube for a video based on provided keywords. Try typing '!help' for more information on my commands.
+
+Octunes was written in Javascript, Sovaros 2020 All Rights Reserved... or something like that.
