@@ -1,3 +1,5 @@
+const fetch = require('node-fetch');
+
 function isValidHttpUrl(string) {
     let url;
 
@@ -45,4 +47,17 @@ function outputQueue(msg, server) {
     }
 }
 
-module.exports = { isValidHttpUrl, convertSecondsToMinutes, log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog }
+async function getRandomCat(msg) {
+    const { file } = await fetch('https://aws.random.cat/meow').then(response => response.json());
+    msg.channel.sendFile(file);
+}
+
+module.exports = {
+    isValidHttpUrl,
+    convertSecondsToMinutes,
+    log,
+    outputQueue,
+    sendChannelReplyAndLog,
+    sendChannelMessageAndLog,
+    getRandomCat
+}

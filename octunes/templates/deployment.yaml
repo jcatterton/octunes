@@ -18,7 +18,8 @@ spec:
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
-            - mountPath: /root/config.json
+            - mountPath: /usr/src/config.json
+              subPath: config.json
               name: config
               readOnly: true
       volumes:

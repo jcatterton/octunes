@@ -18,11 +18,11 @@ function playSong(msg, args, server) {
     }
 
     if (!msg.member.voiceChannel) {
-        sendChannelMessageAndLog(msg, "You need to be in a void channel to listen to music, ya dingus!", "Sent message to " + msg.member.name);
+        sendChannelMessageAndLog(msg, "You need to be in a voice channel to listen to music, ya dingus!", "Sent message to " + msg.member.name);
         return;
     }
 
-    if (!allowedVoiceChannels.some(c => c === msg.member.voiceChannel.name)) {
+    if (!allowedVoiceChannels.some(c => c === msg.member.voiceChannel.id)) {
         sendChannelMessageAndLog(msg, "I'm not allowed to join the channel you're in. :(", "Sent message to " + msg.member.name);
         return;
     }
@@ -103,7 +103,7 @@ function play(connection, msg, server) {
     server.dispatcher = connection.playStream(ytdl(server.queue[0].link, { filter: "audioonly", quality: "lowestaudio" }));
     startTimeOfCurrentSong = Date.now();
     server.dispatcher.on("end", function(reason) {
-        if (parseInt((Date.now() - startTimeOfCurrentSong)/1000) < parseInt(server.queue[0]?.length) && !reason.skip) {
+        if (parseInt((Date.now() - startTimeOfCurrentSong)/1000) < parseInt(server.queue[0]?.length) && !reason.skip && !server.queue[0].link.includes("dQw4w9WgXcQ")) {
             log(server.queue[0].title + " ended after " + convertSecondsToMinutes((Date.now() - startTimeOfCurrentSong)/1000) + ", but length should have been " + convertSecondsToMinutes(server.queue[0].length), null);
             msg.channel.send("Oopsy poopsy, I made a fucky wucky and the audio ended early :point_right::point_left::pleading_face:\n\nPwease don't tell Sova or he'll have to fix me uwu.")
         }

@@ -1,5 +1,5 @@
 const { playSong, getNowPlayingInfo, pause, resume } = require("./player");
-const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog } = require("./utilities");
+const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat } = require("./utilities");
 
 const config = require("../config.json");
 const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
@@ -15,7 +15,7 @@ const help = require('../text-files/help');
 const prefix = "!"
 
 function handleMessage(servers, server, msg) {
-    if (!allowedTextChannels.some(chan => chan === (msg.guild?.channels.find(c => c.id === msg.channel.id).name))) {
+    if (!allowedTextChannels.some(chan => chan === (msg.guild?.channels.find(c => c.id === msg.channel.id).id))) {
         return;
     }
 
@@ -97,6 +97,9 @@ function handleMessage(servers, server, msg) {
             case "rs":
             case "resume":
                 resume(msg, server);
+                break;
+            case "pspsps":
+                getRandomCat(msg);
                 break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
