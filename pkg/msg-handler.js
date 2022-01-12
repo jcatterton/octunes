@@ -14,8 +14,8 @@ const help = require('../text-files/help');
 
 const prefix = "!"
 
-function handleMessage(servers, server, msg) {
-    if (!allowedTextChannels.some(chan => chan === (msg.guild?.channels.find(c => c.id === msg.channel.id).id))) {
+function handleMessage(bot, servers, server, msg) {
+    if (!allowedTextChannels.some(chan => chan === (msg.channel.id))) {
         return;
     }
 
@@ -34,20 +34,20 @@ function handleMessage(servers, server, msg) {
                 break;
             case "pl":
             case "play":
-                playSong(msg, args, server);
+                playSong(bot, msg, args, server);
                 break;
             case "sk":
             case "skip":
                 if (server.dispatcher) {
-                    server.dispatcher.end({skip: true});
+                    server.dispatcher.end();
                 }
                 sendChannelMessageAndLog(msg, "Skipping song", "Song skipped");
                 break;
             case "st":
             case "stop":
-                if (msg.guild.voiceConnection) {
+                if (bot.voice.connections.size > 0) {
                     server.queue = [];
-                    server.dispatcher.end({skip: true});
+                    server.dispatcher.end();
                     sendChannelMessageAndLog(msg, "Stopping playback and purging queue", "Queue purged");
                 }
                 break;
@@ -100,6 +100,13 @@ function handleMessage(servers, server, msg) {
                 break;
             case "pspsps":
                 getRandomCat(msg);
+                break;
+            case "ding":
+                if (msg.author.id === "230081914776715264") {
+                    msg.channel.send("Fuck you, Moss");
+                } else {
+                    msg.channel.send("dong!")
+                }
                 break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);

@@ -11,18 +11,18 @@ let nowPlaying;
 let pauseStartTime;
 let timeSpentPaused;
 
-function playSong(msg, args, server) {
+function playSong(bot, msg, args, server) {
     if (!args[1]) {
         msg.channel.send("Play what? :thinking:")
         return;
     }
 
-    if (!msg.member.voiceChannel) {
+    if (!msg.member) {
         sendChannelMessageAndLog(msg, "You need to be in a voice channel to listen to music, ya dingus!", "Sent message to " + msg.member.name);
         return;
     }
 
-    if (!allowedVoiceChannels.some(c => c === msg.member.voiceChannel.id)) {
+    if (!allowedVoiceChannels.some(c => c === msg.member.voice.channelID)) {
         sendChannelMessageAndLog(msg, "I'm not allowed to join the channel you're in. :(", "Sent message to " + msg.member.name);
         return;
     }
@@ -35,17 +35,17 @@ function playSong(msg, args, server) {
         }
         ytSearch.search(query).then(
             response => {
-                addToQueue(msg, server, response.videos[0].url);
+                addToQueue(bot, msg, server, response.videos[0].url);
             }, err => {
                 sendChannelMessageAndLog(msg, "Uh oh! Looks like I experienced an error while trying to search YouTube. Try again, it's probably nothing... maybe", "Error conduction search: " + err);
             }
         );
     } else {
-        addToQueue(msg, server, songLink);
+        addToQueue(bot, msg, server, songLink);
     }
 }
 
-function addToQueue(msg, server, songLink) {
+function addToQueue(bot, msg, server, songLink) {
     ytdl.getInfo(songLink).then(
         response => {
             if (Math.random() <= 0.01) {
@@ -54,7 +54,9 @@ function addToQueue(msg, server, songLink) {
                         "title": response.videoDetails.title,
                         "runTime": response.videoDetails.lengthSeconds,
                         "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                        "length": response.videoDetails.lengthSeconds
+                        "length": response.videoDetails.lengthSeconds,
+                        "live": false,
+                        "formats": response.formats
                     }
                 );
             } else {
@@ -63,30 +65,37 @@ function addToQueue(msg, server, songLink) {
                         "title": response.videoDetails.title,
                         "runTime": response.videoDetails.lengthSeconds,
                         "link": songLink,
-                        "length": response.videoDetails.lengthSeconds
+                        "length": response.videoDetails.lengthSeconds,
+                        "live": response.videoDetails.isLiveContent,
+                        "formats": response.formats
                     }
                 );
             }
 
             if (server.queue.length > 1) {
-                let totalQueueLength = 0;
-                for (let i = 1; i < server.queue.length - 1; i++) {
-                    totalQueueLength += parseInt(server.queue[i].runTime, 10);
+                if (server.queue.slice(0, -1).some(s => s.live)) {
+                    const reply = "Song added to queue. One of the songs in queue is a livestream so there is no estimated time until played."
+                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                } else {
+                    let totalQueueLength = 0;
+                    for (let i = 1; i < server.queue.length - 1; i++) {
+                        totalQueueLength += parseInt(server.queue[i].runTime, 10);
+                    }
+                    totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000);
+
+                    const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
+                        "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
+                        convertSecondsToMinutes(totalQueueLength));
+
+                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
                 }
-                totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong)/1000);
-
-                const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
-                    "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
-                    convertSecondsToMinutes(totalQueueLength));
-
-                sendChannelMessageAndLog(msg, reply, "Song added to queue");
             } else {
                 sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
                 nowPlaying = server.queue[0];
             }
 
-            if (!msg.guild.voiceConnection) {
-                msg.member.voiceChannel.join().then(function(connection) {
+            if (bot.voice.connections.size === 0) {
+                bot.channels.cache.get(msg.member.voice.channelID).join().then(function(connection) {
                     play(connection, msg, server);
                 }, err => {
                     log("Error joining voice channel: " + err, null);
@@ -100,23 +109,48 @@ function addToQueue(msg, server, songLink) {
 
 function play(connection, msg, server) {
     timeSpentPaused = 0;
-    server.dispatcher = connection.playStream(ytdl(server.queue[0].link, { filter: "audioonly", quality: "lowestaudio" }));
-    startTimeOfCurrentSong = Date.now();
-    server.dispatcher.on("end", function(reason) {
-        if (parseInt((Date.now() - startTimeOfCurrentSong)/1000) < parseInt(server.queue[0]?.length) && !reason.skip && !server.queue[0].link.includes("dQw4w9WgXcQ")) {
-            log(server.queue[0].title + " ended after " + convertSecondsToMinutes((Date.now() - startTimeOfCurrentSong)/1000) + ", but length should have been " + convertSecondsToMinutes(server.queue[0].length), null);
-            msg.channel.send("Oopsy poopsy, I made a fucky wucky and the audio ended early :point_right::point_left::pleading_face:\n\nPwease don't tell Sova or he'll have to fix me uwu.")
-        }
-        server.queue.shift();
-        if(server.queue[0]) {
-            nowPlaying = server.queue[0];
-            play(connection, msg, server);
+
+    const stream = () => {
+        if (server.queue[0].live) {
+            console.log("beans");
+            const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
+            return format.url;
         } else {
-            nowPlaying = null;
-            connection.disconnect();
-            log("Playback finished", null);
+            console.log("memes");
+            return ytdl(server.queue[0].link, { filter: "audioonly", quality: "highestaudio", highWaterMark: 1 << 25});
         }
+    }
+    server.dispatcher = connection.play(stream());
+
+    startTimeOfCurrentSong = Date.now();
+
+    server.dispatcher.on("finish", () => {
+        shiftQueue(connection, msg, server);
     });
+
+    server.dispatcher.on("error", err => {
+       shiftQueue(connection, msg, server);
+       sendChannelMessageAndLog(msg, "Error during playback", "Error occurred during playback: " + err);
+       console.trace();
+    });
+
+    server.dispatcher.player.on("error", err => {
+        shiftQueue(connection, msg, server);
+        sendChannelMessageAndLog(msg, "Error during playback", "Error occurred during playback: " + err);
+        console.trace();
+    });
+}
+
+function shiftQueue(connection, msg, server) {
+    server.queue.shift();
+    if (server.queue[0]) {
+        nowPlaying = server.queue[0];
+        play(connection, msg, server);
+    } else {
+        nowPlaying = null;
+        connection.disconnect();
+        sendChannelMessageAndLog(msg, "Playback finished", "playback finished");
+    }
 }
 
 function getNowPlayingInfo(msg, server) {
@@ -125,8 +159,14 @@ function getNowPlayingInfo(msg, server) {
         return;
     }
 
-    const reply = "Currently " + (server.dispatcher.paused ? "paused " : "playing ") + nowPlaying.link + ", length is: " + convertSecondsToMinutes(nowPlaying.length) + " remaining time is: " + convertSecondsToMinutes(getRemainingTime(server));
-    sendChannelMessageAndLog(msg, reply, "nowplaying information sent");
+    const reply = () => {
+        if (!server.queue[0].live) {
+            return "Currently " + (server.dispatcher.paused ? "paused " : "playing ") + nowPlaying.link + ", length is: " + convertSecondsToMinutes(nowPlaying.length) + " remaining time is: " + convertSecondsToMinutes(getRemainingTime(server));
+        } else {
+            return "Current livestreaming " + nowPlaying.link;
+        }
+    }
+    sendChannelMessageAndLog(msg, reply(), "nowplaying information sent");
 }
 
 function getRemainingTime(server) {

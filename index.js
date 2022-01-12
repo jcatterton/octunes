@@ -14,7 +14,7 @@ bot.on('ready', () => {
 })
 
 bot.on('message', msg => {
-    handleMessage(servers, server, msg);
+    handleMessage(bot, servers, server, msg);
 })
 
 bot.login(token).then(() => {

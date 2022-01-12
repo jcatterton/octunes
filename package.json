@@ -9,10 +9,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^11.6.4",
+    "discord.js": "^12.5.3",
     "node-fetch": "^2.6.6",
     "opusscript": "0.0.8",
+    "prism-media": "github:hydrabolt/prism-media",
     "yt-search": "^2.10.2",
-    "ytdl-core": "^4.9.2"
+    "ytdl-core": "^4.10.0"
   }
 }

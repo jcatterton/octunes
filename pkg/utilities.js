@@ -49,7 +49,11 @@ function outputQueue(msg, server) {
 
 async function getRandomCat(msg) {
     const { file } = await fetch('https://aws.random.cat/meow').then(response => response.json());
-    msg.channel.sendFile(file);
+    await msg.channel.send({
+        files: [{
+            attachment: file
+        }]
+    });
 }
 
 module.exports = {
