@@ -255,4 +255,65 @@ function checkForTimestamp(link) {
     return ts;
 }
 
-module.exports = { playSong, getNowPlayingInfo, pause, resume };
+function shuffleQueue(server, msg) {
+    if (!server.queue) {
+        sendChannelMessageAndLog(msg, "Can't shuffle an empty queue :thinking:", "Attempted to shuffle empty queue");
+        return;
+    }
+
+    if (server.queue.length === 1) {
+        sendChannelMessageAndLog(msg, "There is nothing in the queue except the song playing, I can't shuffle.", "Attempted to shuffle queue of one");
+        return;
+    }
+
+    if (server.queue.length === 2) {
+        sendChannelMessageAndLog(msg, "There is only one pending song, I can't shuffle.", "Attempted to shuffle queue of two");
+        return;
+    }
+
+    const pendingSongs = server.queue.slice(1);
+    server.queue = [server.queue[0]];
+
+    for (let i = pendingSongs.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        let temp = pendingSongs[i];
+        pendingSongs[i] = pendingSongs[j];
+        pendingSongs[j] = temp;
+    }
+
+    for (let s of pendingSongs) {
+        server.queue.push(s);
+    }
+
+    sendChannelMessageAndLog(msg, "Shuffled queue!", "shuffled queue");
+}
+
+function bumpSong(msg, server, ind) {
+    if (!ind) {
+        sendChannelMessageAndLog(msg, "Which song should I bump? :thinking:", "Insufficient parameters message sent");
+    } else {
+        const index = parseInt(ind);
+        if (index <= 0 || isNaN(index) || index > server.queue.length - 1) {
+            sendChannelMessageAndLog(msg, "Invalid index provided. Learn to count, ya dingus!", "Invalid index indication initiated");
+            return;
+        }
+
+        if (index === 1) {
+            sendChannelMessageAndLog(msg, "I can't bump the song that's already next to play.", "Attempted to bump first song");
+            return;
+        }
+
+        let pendingSongs = server.queue.slice(1);
+        server.queue = [server.queue[0]];
+        const bumpedSong = pendingSongs[index - 1];
+        pendingSongs.splice(index - 1, 1);
+        server.queue.push(bumpedSong);
+        for (let s of pendingSongs) {
+            server.queue.push(s);
+        }
+
+        sendChannelMessageAndLog(msg, server.queue[1].title + " moved up in queue.", "bumped song");
+    }
+}
+
+module.exports = { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong };

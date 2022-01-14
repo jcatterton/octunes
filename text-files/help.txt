@@ -12,6 +12,8 @@ Commands:
 - !remove or !rm {index} - Removes a song from the queue, use the index provided by the !queue operation.
 - !pause or !ps - Pauses the currently playing song.
 - !resume or !rs - Resumes the currently playing song, if it is paused.
+- !shuffle or !sh - Shuffles the queue. (There must be at least three songs in queue including the currently playing song)
+- !bump or !b {index} - Moves a song in the queue to position one, use index provided by the !queue operation.
 - !info or !i - Bot info
 
 Any bugs? Tell Sova!

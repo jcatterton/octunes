@@ -1,4 +1,4 @@
-const { playSong, getNowPlayingInfo, pause, resume } = require("./player");
+const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong } = require("./player");
 const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat } = require("./utilities");
 
 const config = require("../config.json");
@@ -123,6 +123,14 @@ function handleMessage(bot, servers, server, msg) {
                 } else {
                     msg.reply("YOOOOoooooooo")
                 }
+                break;
+            case "shuffle":
+            case "sh":
+                shuffleQueue(server, msg);
+                break;
+            case "bump":
+            case "b":
+                bumpSong(msg, server, args[1])
                 break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
