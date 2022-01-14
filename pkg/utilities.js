@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const randomFrog = require('random-frog')
 
 function isValidHttpUrl(string) {
     let url;
@@ -56,6 +57,16 @@ async function getRandomCat(msg) {
     });
 }
 
+async function getRandomDog(msg) {
+    await fetch('https://dog.ceo/api/breeds/image/random').then(
+        response => response.json()
+    ).then(
+        data => {
+            msg.channel.send({files: [data.message]});
+        }
+    )
+}
+
 module.exports = {
     isValidHttpUrl,
     convertSecondsToMinutes,
@@ -63,5 +74,6 @@ module.exports = {
     outputQueue,
     sendChannelReplyAndLog,
     sendChannelMessageAndLog,
-    getRandomCat
+    getRandomCat,
+    getRandomDog
 }

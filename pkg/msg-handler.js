@@ -1,5 +1,5 @@
 const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong } = require("./player");
-const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat } = require("./utilities");
+const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog } = require("./utilities");
 
 const config = require("../config.json");
 const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
@@ -102,6 +102,9 @@ function handleMessage(bot, servers, server, msg) {
                 break;
             case "pspsps":
                 getRandomCat(msg);
+                break;
+            case "woof":
+                getRandomDog(msg);
                 break;
             case "ding":
                 if (msg.author.id === "230081914776715264") {
