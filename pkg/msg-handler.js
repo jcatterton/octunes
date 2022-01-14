@@ -39,6 +39,7 @@ function handleMessage(bot, servers, server, msg) {
             case "sk":
             case "skip":
                 if (server.dispatcher) {
+                    server.dispatcher.resume();
                     server.dispatcher.end();
                 }
                 sendChannelMessageAndLog(msg, "Skipping song", "Song skipped");

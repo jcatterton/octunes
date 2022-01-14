@@ -3,7 +3,7 @@ Octunes help menu
 All commands must start with '!'
 
 Commands:
-- !play or !pl {link} - Plays song from provided youtube link.
+- !play or !pl {link} - Plays song from provided youtube link. Supports timestamps as well.
 - !play or !pl {keywords} - Searches youtube based on your keywords and plays first result.
 - !skip or !sk - Skips currently playing song.
 - !stop or !st - Stops playback and removes songs from queue.

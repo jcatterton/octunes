@@ -10,6 +10,7 @@ let startTimeOfCurrentSong;
 let nowPlaying;
 let pauseStartTime;
 let timeSpentPaused;
+let startingTimestamp;
 
 function playSong(bot, msg, args, server) {
     if (!args[1]) {
@@ -81,7 +82,7 @@ function addToQueue(bot, msg, server, songLink) {
                     for (let i = 1; i < server.queue.length - 1; i++) {
                         totalQueueLength += parseInt(server.queue[i].runTime, 10);
                     }
-                    totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000);
+                    totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000) - startingTimestamp;
 
                     const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
                         "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
@@ -108,6 +109,14 @@ function addToQueue(bot, msg, server, songLink) {
 }
 
 function play(connection, msg, server) {
+    // ts is undefined if there is no timestamp
+    const ts = checkForTimestamp(server.queue[0].link);
+
+    if (!ts) {
+        startingTimestamp = 0;
+    } else {
+        startingTimestamp = ts;
+    }
     timeSpentPaused = 0;
 
     const stream = () => {
@@ -115,10 +124,14 @@ function play(connection, msg, server) {
             const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
             return format.url;
         } else {
-            return ytdl(server.queue[0].link, { filter: "audioonly", quality: "highestaudio", highWaterMark: 1 << 25});
+            return ytdl(server.queue[0].link, {
+                filter: "audioonly",
+                quality: "highestaudio",
+                highWaterMark: 1 << 25
+            });
         }
     }
-    server.dispatcher = connection.play(stream());
+    server.dispatcher = connection.play(stream(), { seek: (ts && !isNaN(ts)) ? ts : 0 });
 
     startTimeOfCurrentSong = Date.now();
 
@@ -159,7 +172,7 @@ function getNowPlayingInfo(msg, server) {
 
     const reply = () => {
         if (!server.queue[0].live) {
-            return "Currently " + (server.dispatcher.paused ? "paused " : "playing ") + nowPlaying.link + ", length is: " + convertSecondsToMinutes(nowPlaying.length) + " remaining time is: " + convertSecondsToMinutes(getRemainingTime(server));
+            return "Currently " + (server.dispatcher.paused ? "paused " : "playing ") + nowPlaying.link + ", length is: " + convertSecondsToMinutes(nowPlaying.length) + " remaining time is: " + convertSecondsToMinutes(getRemainingTime(server) - startingTimestamp);
         } else {
             return "Current livestreaming " + nowPlaying.link;
         }
@@ -209,6 +222,37 @@ function resume(msg, server) {
     timeSpentPaused = timeSpentPaused + ((Date.now() - pauseStartTime)/1000);
 
     sendChannelMessageAndLog(msg, "Playback resumed", "playback resumed");
+}
+
+function checkForTimestamp(link) {
+    let ts = link.split("t=")[1];
+
+    if (!ts) {
+        return ts;
+    }
+
+    ts = ts.replaceAll("M", "m");
+    ts = ts.replaceAll("S", "s");
+
+    if (ts.includes("m")) {
+        const m = ts.split("m")[0];
+        let s = ts.split("m")[1];
+
+        if (s.endsWith("s")) {
+            s = s.substring(0, s.length - 1);
+        }
+
+        ts = parseInt(m) * 60 + (s.length ? parseInt(s) : 0);
+    } else {
+        if (ts.endsWith("s")) {
+            ts = parseInt(ts.substring(0, ts.length - 1));
+        } else {
+            ts = parseInt(ts);
+        }
+    }
+
+    console.log(ts);
+    return ts;
 }
 
 module.exports = { playSong, getNowPlayingInfo, pause, resume };
