@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-const randomFrog = require('random-frog')
 
 function isValidHttpUrl(string) {
     let url;
