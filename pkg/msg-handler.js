@@ -47,7 +47,9 @@ function handleMessage(bot, servers, server, msg) {
             case "stop":
                 if (bot.voice.connections.size > 0) {
                     server.queue = [];
+                    server.dispatcher.resume();
                     server.dispatcher.end();
+                    server.dispatcher = null;
                     sendChannelMessageAndLog(msg, "Stopping playback and purging queue", "Queue purged");
                 }
                 break;
@@ -65,7 +67,6 @@ function handleMessage(bot, servers, server, msg) {
                     sendChannelMessageAndLog(msg, "Which song should I remove? :thinking:", "Insufficient parameters message sent");
                 } else {
                     const index = parseInt(args[1]);
-                    console.log(index);
                     if (index <= 0 || isNaN(index)) {
                         sendChannelMessageAndLog(msg, "Invalid index provided. Learn to count, ya dingus!", "Invalid index indication initiated");
                         return;
@@ -106,6 +107,20 @@ function handleMessage(bot, servers, server, msg) {
                     msg.channel.send("Fuck you, Moss");
                 } else {
                     msg.channel.send("dong!")
+                }
+                break;
+            case "yo":
+                const r = Math.random();
+                if (r <= 0.2) {
+                    msg.reply("Yo!")
+                } else if (r <= 0.4) {
+                    msg.reply("Yooooo")
+                } else if (r <= 0.6) {
+                    msg.reply("YOOOO!")
+                } else if (r <= 0.8) {
+                    msg.reply("yooo...")
+                } else {
+                    msg.reply("YOOOOoooooooo")
                 }
                 break;
             default:

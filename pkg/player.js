@@ -112,11 +112,9 @@ function play(connection, msg, server) {
 
     const stream = () => {
         if (server.queue[0].live) {
-            console.log("beans");
             const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
             return format.url;
         } else {
-            console.log("memes");
             return ytdl(server.queue[0].link, { filter: "audioonly", quality: "highestaudio", highWaterMark: 1 << 25});
         }
     }
@@ -203,9 +201,12 @@ function resume(msg, server) {
         return;
     }
 
+    // Kind of weird but for some reason in this version of DiscordJS on this version of Node you have to call pause and resume again to actually resume
     server.dispatcher.resume();
+    server.dispatcher.pause();
+    server.dispatcher.resume();
+
     timeSpentPaused = timeSpentPaused + ((Date.now() - pauseStartTime)/1000);
-    console.log(timeSpentPaused);
 
     sendChannelMessageAndLog(msg, "Playback resumed", "playback resumed");
 }
