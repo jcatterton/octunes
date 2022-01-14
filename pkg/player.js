@@ -256,7 +256,7 @@ function checkForTimestamp(link) {
 }
 
 function shuffleQueue(server, msg) {
-    if (!server.queue) {
+    if (server.queue.length === 0) {
         sendChannelMessageAndLog(msg, "Can't shuffle an empty queue :thinking:", "Attempted to shuffle empty queue");
         return;
     }
