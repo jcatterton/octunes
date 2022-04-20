@@ -1,4 +1,12 @@
 const fetch = require('node-fetch');
+const snoowrap = require('snoowrap');
+
+const fs = require('fs');
+require.extensions['.txt'] = function (module, filename) {
+    module.exports = fs.readFileSync(filename, 'utf8');
+};
+const username = require('../text-files/username');
+const password = require('../text-files/password');
 
 function isValidHttpUrl(string) {
     let url;
@@ -42,7 +50,7 @@ function outputQueue(msg, server) {
                 return (server.queue.indexOf(i) + ". " + i.title);
             }
         );
-        queueReply[0] = ":point_right: " + server.queue[0].title + (server.dispatcher.paused ? " (Paused)" : " (Now playing)");
+        queueReply[0] = ":point_right: " + server.queue[0].title + (server.dispatcher?.paused ? " (Paused)" : " (Now playing)");
         sendChannelMessageAndLog(msg, queueReply, "queue information sent");
     }
 }
@@ -66,6 +74,111 @@ async function getRandomDog(msg) {
     )
 }
 
+async function getRandomFrog(msg) {
+    let num = Math.floor(Math.random() * 54);
+    if (num.toString().length === 1) {
+        num = "000" + num;
+    } else {
+        num = "00" + num;
+    }
+
+    msg.channel.send({files: ["http://www.allaboutfrogs.org/funstuff/random/" + num + ".jpg"]});
+}
+
+async function getRandomFarmAnimal(msg) {
+    const animals = [
+        { animal: "pigs", sound: "Oink!" },
+        { animal: "horses", sound: "Neigh!" },
+        { animal: "chickens", sound: "Cluck!" },
+        { animal: "cow", sound: "Moo!" },
+        { animal: "sheep", sound: "Baa!" },
+        { animal: "goats", sound: "Bleat!" },
+        { animal: "duck", sound: "Quack!" },
+        { animal: "turkeys", sound: "Gobble!" },
+        { animal: "donkeys", sound: "Hee Haw!" }
+    ]
+
+    const r = Math.floor(Math.random() * animals.length);
+    let animal = animals[r].animal;
+    let sound = animals[r].sound;
+
+    const reddit = new snoowrap({
+        userAgent: 'put your user-agent string here',
+        clientId: '9UKLWr3gXXfCIxcWv26Zlg',
+        clientSecret: 'oU2xj_RoVSg8Aa8oASUteLIqiKGksQ',
+        username: username.replace("\n", ""),
+        password: password.replace("\n", "")
+    });
+
+    reddit.getSubreddit(animal).getTop({time: 'all'}).then(
+        response => {
+            const validLinks = response.filter(function(d) {
+                return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
+            });
+
+            const index = Math.floor(Math.random() * validLinks.length);
+
+            msg.channel.send(
+                sound,
+                {
+                    files: [
+                        validLinks[index].url
+                    ]
+                }
+            )
+        }
+    )
+}
+
+async function getRandomOctopus(msg) {
+    const reddit = new snoowrap({
+        userAgent: 'put your user-agent string here',
+        clientId: '9UKLWr3gXXfCIxcWv26Zlg',
+        clientSecret: 'oU2xj_RoVSg8Aa8oASUteLIqiKGksQ',
+        username: username.replace("\n", ""),
+        password: password.replace("\n", "")
+    });
+
+    reddit.getSubreddit("octopus").getTop({time: 'all'}).then(
+        response => {
+            const validLinks = response.filter(function(d) {
+                return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
+            });
+
+            const index = Math.floor(Math.random() * validLinks.length);
+
+            msg.channel.send(
+                {
+                    files: [
+                        validLinks[index].url
+                    ]
+                }
+            )
+        }
+    )
+}
+
+function horza(msg) {
+    const horzas = [
+        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/37/182304549-inset.jpg",
+        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/128/191035008-inset.jpg",
+        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/119/215029111-inset.jpg"
+    ];
+
+    const horzaSounds = [
+        "Eh?",
+        "Was that a healer fuck up?",
+        "3... 2... wait... 3... no... 321!"
+    ];
+
+    msg.channel.send(
+        horzaSounds[Math.floor(Math.random() * 3)],
+        {
+            files: [horzas[Math.floor(Math.random() * 3)]]
+        }
+    );
+}
+
 module.exports = {
     isValidHttpUrl,
     convertSecondsToMinutes,
@@ -74,5 +187,9 @@ module.exports = {
     sendChannelReplyAndLog,
     sendChannelMessageAndLog,
     getRandomCat,
-    getRandomDog
+    getRandomDog,
+    getRandomFrog,
+    getRandomFarmAnimal,
+    getRandomOctopus,
+    horza
 }

@@ -1,7 +1,9 @@
 const { isValidHttpUrl, log, convertSecondsToMinutes, sendChannelMessageAndLog } = require("./utilities");
 
 const ytSearch = require("yt-search");
+const ytpl = require('ytpl');
 const ytdl = require("ytdl-core");
+const ytmpl = require('yt-mix-playlist');
 
 const config = require("../config.json");
 const allowedVoiceChannels = config.ALLOWED_VOICE_CHANNELS.split(",");
@@ -12,71 +14,109 @@ let pauseStartTime;
 let timeSpentPaused;
 let startingTimestamp;
 
-function playSong(bot, msg, args, server) {
+function playSong(bot, msg, args, server, mix) {
     if (!args[1]) {
         msg.channel.send("Play what? :thinking:")
         return;
     }
 
-    if (!msg.member) {
+    if (!msg.member.voice.channel) {
         sendChannelMessageAndLog(msg, "You need to be in a voice channel to listen to music, ya dingus!", "Sent message to " + msg.member.name);
         return;
     }
 
-    if (!allowedVoiceChannels.some(c => c === msg.member.voice.channelID)) {
+    if (!allowedVoiceChannels.some(c => c === msg.member.voice.channel.id)) {
         sendChannelMessageAndLog(msg, "I'm not allowed to join the channel you're in. :(", "Sent message to " + msg.member.name);
         return;
     }
 
     let songLink = args[1]
+    if (songLink.startsWith("<") && songLink.endsWith(">")) {
+        songLink = songLink.substring(1, songLink.length - 1);
+    }
+
     if (!isValidHttpUrl(songLink)) {
         let query = "";
         for (let i = 1; i < args.length; i++) {
             query = query + args[i];
+            query = query + " ";
         }
         ytSearch.search(query).then(
             response => {
-                addToQueue(bot, msg, server, response.videos[0].url);
+                if (response.videos === []) {
+                    sendChannelMessageAndLog(msg, "I didn't get any results for that search query :(", "no results")
+                }
+                if (!mix) {
+                    server.mix = [];
+                    server.mixIndex = -1;
+                    addToQueue(bot, msg, server, response.videos[0].url, true, null);
+                } else {
+                    ytmpl(response.videos[0].videoId).then(res => {
+                        sendChannelMessageAndLog(msg, "Fetching mix", "Fetching mix");
+                        server.mix = res.items;
+                        server.mixIndex = 0;
+                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null)
+                    });
+                }
             }, err => {
                 sendChannelMessageAndLog(msg, "Uh oh! Looks like I experienced an error while trying to search YouTube. Try again, it's probably nothing... maybe", "Error conduction search: " + err);
             }
         );
     } else {
-        addToQueue(bot, msg, server, songLink);
+        if (songLink.includes("/playlist")) {
+            ytpl(songLink.split("list=")[1]).then(res => {
+
+                sendChannelMessageAndLog(msg, "Adding " + res.items.length + " songs to queue, this may take a minute", "Adding playlist to queue");
+
+                for (let i = 0; i < res.items.length; i++) {
+                    addToQueue(bot, msg, server, res.items[i].url, false, null);
+                }
+            }, () => {
+                sendChannelMessageAndLog(msg, "I wasn't able to fetch that playlist. Remember that I cannot play private playlists, and I also cannot play mixes with this command, only discrete playlists. If you want to listen to a mix, try the '!mix' followed by a link or song name.", "Error fetching playlist");
+            })
+        }
+
+        else {
+            if (!mix) {
+                server.mix = []
+                server.mixIndex = -1
+                addToQueue(bot, msg, server, songLink, true, null);
+            } else {
+                ytdl.getInfo(songLink).then(res => {
+                    ytmpl(res.videoDetails.videoId).then(r => {
+                        sendChannelMessageAndLog(msg, "Fetching mix", "Fetching mix");
+                        server.mix = r.items;
+                        server.mixIndex = 0;
+                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null)
+                    });
+                });
+            }
+        }
     }
 }
 
-function addToQueue(bot, msg, server, songLink) {
+function addToQueue(bot, msg, server, songLink, echo, c) {
     ytdl.getInfo(songLink).then(
         response => {
-            if (Math.random() <= 0.01) {
-                server.queue.push(
-                    {
-                        "title": response.videoDetails.title,
-                        "runTime": response.videoDetails.lengthSeconds,
-                        "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                        "length": response.videoDetails.lengthSeconds,
-                        "live": false,
-                        "formats": response.formats
-                    }
-                );
-            } else {
-                server.queue.push(
-                    {
-                        "title": response.videoDetails.title,
-                        "runTime": response.videoDetails.lengthSeconds,
-                        "link": songLink,
-                        "length": response.videoDetails.lengthSeconds,
-                        "live": response.videoDetails.isLiveContent,
-                        "formats": response.formats
-                    }
-                );
-            }
+            server.queue.push(
+                {
+                    "title": response.videoDetails.title,
+                    "runTime": response.videoDetails.lengthSeconds,
+                    "link": songLink,
+                    "length": response.videoDetails.lengthSeconds,
+                    "live": response.videoDetails.isLiveContent,
+                    "formats": response.formats
+                }
+            );
 
             if (server.queue.length > 1) {
                 if (server.queue.slice(0, -1).some(s => s.live)) {
                     const reply = "Song added to queue. One of the songs in queue is a livestream so there is no estimated time until played."
-                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                    if (echo) {
+                        sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                    } else {
+                        log("Song added to queue")
+                    }
                 } else {
                     let totalQueueLength = 0;
                     for (let i = 1; i < server.queue.length - 1; i++) {
@@ -88,19 +128,25 @@ function addToQueue(bot, msg, server, songLink) {
                         "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
                         convertSecondsToMinutes(totalQueueLength));
 
-                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                    if (echo) {
+                        sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                    } else {
+                        log("Song added to queue");
+                    }
                 }
             } else {
                 sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
                 nowPlaying = server.queue[0];
             }
 
-            if (bot.voice.connections.size === 0) {
-                bot.channels.cache.get(msg.member.voice.channelID).join().then(function(connection) {
-                    play(connection, msg, server);
+            if (bot.voice.connections?.size === 0) {
+                bot.channels.cache.get(msg.member.voice.channel.id).join().then(function(connection) {
+                    play(connection, msg, server, bot);
                 }, err => {
                     log("Error joining voice channel: " + err, null);
                 });
+            } else if (c) {
+                play(c, msg, server, bot);
             }
         }, err => {
             sendChannelMessageAndLog(msg, "I encountered an error getting info on that song. Try again, it's probably nothing... maybe", "Error adding to queue: " + err);
@@ -108,7 +154,7 @@ function addToQueue(bot, msg, server, songLink) {
     )
 }
 
-function play(connection, msg, server) {
+function play(connection, msg, server, bot) {
     // ts is undefined if there is no timestamp
     const ts = checkForTimestamp(server.queue[0].link);
 
@@ -124,6 +170,7 @@ function play(connection, msg, server) {
             const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
             return format.url;
         } else {
+            console.log(server.queue[0])
             return ytdl(server.queue[0].link, {
                 filter: "audioonly",
                 quality: "highestaudio",
@@ -133,35 +180,88 @@ function play(connection, msg, server) {
     }
     server.dispatcher = connection.play(stream(), { seek: (ts && !isNaN(ts)) ? ts : 0 });
 
+    bot.user.setPresence({
+        status: 'online',
+        activity: {
+            name: server.queue[0].title,
+            type: 'PLAYING',
+            url: server.queue[0].link
+        }
+    });
+
     startTimeOfCurrentSong = Date.now();
 
     server.dispatcher.on("finish", () => {
-        shiftQueue(connection, msg, server);
+        shiftQueue(connection, msg, server, bot, true);
     });
 
     server.dispatcher.on("error", err => {
-       shiftQueue(connection, msg, server);
-       sendChannelMessageAndLog(msg, "Error during playback", "Error occurred during playback: " + err);
-       console.trace();
+        sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+        const temp = server.queue;
+        server.queue = [null, server.queue[0]];
+        server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+        for (let i = 1; i < temp.length; i++) {
+            server.queue.push(temp[i]);
+        }
+        shiftQueue(connection, msg, server, bot, false);
+        console.trace();
     });
 
     server.dispatcher.player.on("error", err => {
-        shiftQueue(connection, msg, server);
-        sendChannelMessageAndLog(msg, "Error during playback", "Error occurred during playback: " + err);
+        sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+        const temp = server.queue;
+        server.queue = [null, server.queue[0]];
+        server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+        for (let i = 1; i < temp.length; i++) {
+            server.queue.push(temp[i]);
+        }
+        shiftQueue(connection, msg, server, bot, false);
         console.trace();
     });
 }
 
-function shiftQueue(connection, msg, server) {
-    server.queue.shift();
-    if (server.queue[0]) {
-        nowPlaying = server.queue[0];
-        play(connection, msg, server);
+function shiftQueue(connection, msg, server, bot, rickRollable) {
+    if (server.mixIndex !== -1 && server.mixIndex < server.mix.length) {
+        addToQueue(bot, msg, server, server.mix[++server.mixIndex].url, false, connection);
+        server.queue.shift();
     } else {
-        nowPlaying = null;
-        connection.disconnect();
-        sendChannelMessageAndLog(msg, "Playback finished", "playback finished");
+        if (server.mixIndex !== -1) {
+            server.mixIndex = -1;
+            server.mix = [];
+        }
+
+        server.queue.shift();
+        if (server.queue[0]) {
+            if (Math.random() <= 0.01 && rickRollable) {
+                rickRoll(server);
+            }
+
+            nowPlaying = server.queue[0];
+            play(connection, msg, server, bot);
+        } else {
+            nowPlaying = null;
+            connection.disconnect();
+            sendChannelMessageAndLog(msg, "Playback finished", "playback finished");
+            bot.user.setPresence({ activity: null })
+        }
     }
+}
+
+function rickRoll(server) {
+    const tempQueue = server.queue;
+    server.queue = [
+        {
+            "title": "Rick Astley - Never Gonna Give You Up (Official Music Video)",
+            "runTime": 212,
+            "link": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "length": 212,
+            "live": false,
+            "formats": []
+        }
+    ];
+    tempQueue.forEach(t => {
+        server.queue.push(t);
+    })
 }
 
 function getNowPlayingInfo(msg, server) {
@@ -251,7 +351,6 @@ function checkForTimestamp(link) {
         }
     }
 
-    console.log(ts);
     return ts;
 }
 
@@ -316,4 +415,52 @@ function bumpSong(msg, server, ind) {
     }
 }
 
-module.exports = { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong };
+function swapSongs(msg, server, indexOne, indexTwo) {
+    if (!indexOne || !indexTwo) {
+        sendChannelMessageAndLog(msg, "I need two indexes to swap songs", "unable to swap, two indexes not provided");
+    }
+
+    const indOne = parseInt(indexOne);
+    const indTwo = parseInt(indexTwo);
+    if (indOne <= 0 || isNaN(indOne) || indOne > server.queue.length - 1 || indTwo <= 0 || isNaN(indTwo) || indTwo > server.queue.length) {
+        sendChannelMessageAndLog(msg, "Invalid index provided. Learn to count, ya dingus!", "Invalid index indication initiated");
+        return;
+    }
+
+    if (indOne === indTwo) {
+        sendChannelMessageAndLog(msg, "I can't swap the same index!", "Attempted to swap the same index");
+        return;
+    }
+
+    const temp = server.queue[indOne];
+    server.queue[indOne] = server.queue[indTwo];
+    server.queue[indTwo] = temp;
+
+    sendChannelMessageAndLog(msg, "Swapped " + server.queue[indexTwo].title + " and " + server.queue[indexOne].title);
+}
+
+function move(msg, server, indexOne, indexTwo) {
+    if (!indexOne || !indexTwo) {
+        sendChannelMessageAndLog(msg, "I need two indexes to swap songs", "unable to swap, two indexes not provided");
+    }
+
+    const indOne = parseInt(indexOne);
+    const indTwo = parseInt(indexTwo);
+    if (indOne <= 0 || isNaN(indOne) || indOne > server.queue.length - 1 || indTwo <= 0 || isNaN(indTwo) || indTwo > server.queue.length) {
+        sendChannelMessageAndLog(msg, "Invalid index provided. Learn to count, ya dingus!", "Invalid index indication initiated");
+        return;
+    }
+
+    if (indOne === indTwo) {
+        sendChannelMessageAndLog(msg, "I can't swap the same index!", "Attempted to swap the same index");
+        return;
+    }
+
+    const temp = server.queue[indexOne];
+    server.queue.splice(indOne, 1)
+    server.queue.splice(indTwo, 0, temp);
+
+    sendChannelMessageAndLog(msg, "Moved " + server.queue[indTwo].title + " into position " + indTwo);
+}
+
+module.exports = { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move };

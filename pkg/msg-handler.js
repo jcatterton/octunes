@@ -1,5 +1,5 @@
-const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong } = require("./player");
-const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog } = require("./utilities");
+const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move } = require("./player");
+const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, horza } = require("./utilities");
 
 const config = require("../config.json");
 const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
@@ -21,7 +21,9 @@ function handleMessage(bot, servers, server, msg) {
 
     if (!servers[msg.guild.id]) {
         servers[msg.guild.id] = {
-            queue: []
+            queue: [],
+            mix: [],
+            mixIndex: -1
         }
     }
     server = servers[msg.guild.id]
@@ -34,7 +36,11 @@ function handleMessage(bot, servers, server, msg) {
                 break;
             case "pl":
             case "play":
-                playSong(bot, msg, args, server);
+                playSong(bot, msg, args, server,false);
+                break;
+            case "m":
+            case "mix":
+                playSong(bot, msg, args, server, true);
                 break;
             case "sk":
             case "skip":
@@ -44,10 +50,21 @@ function handleMessage(bot, servers, server, msg) {
                 }
                 sendChannelMessageAndLog(msg, "Skipping song", "Song skipped");
                 break;
+            /*case "skip mix":
+            case "skm":
+                server.mix = [];
+                server.mixIndex = -1;
+                if (server.dispatcher) {
+                    server.dispatcher.resume();
+                    server.dispatcher.end();
+                }
+                break;*/
             case "st":
             case "stop":
                 if (bot.voice.connections.size > 0) {
                     server.queue = [];
+                    server.mix = [];
+                    server.mixIndex = -1;
                     server.dispatcher.resume();
                     server.dispatcher.end();
                     server.dispatcher = null;
@@ -100,12 +117,6 @@ function handleMessage(bot, servers, server, msg) {
             case "resume":
                 resume(msg, server);
                 break;
-            case "pspsps":
-                getRandomCat(msg);
-                break;
-            case "woof":
-                getRandomDog(msg);
-                break;
             case "ding":
                 if (msg.author.id === "230081914776715264") {
                     msg.channel.send("Fuck you, Moss");
@@ -135,6 +146,32 @@ function handleMessage(bot, servers, server, msg) {
             case "b":
                 bumpSong(msg, server, args[1])
                 break;
+            case "swap":
+            case "sw":
+                swapSongs(msg, server, args[1], args[2]);
+                break;
+            case "move":
+            case "mv":
+                move(msg, server, args[1], args[2]);
+                break;
+            /*case "pspsps":
+                getRandomCat(msg);
+                break;
+            case "woof":
+                getRandomDog(msg);
+                break;
+            case "ribbit":
+                getRandomFrog(msg);
+                break;
+            case "eieio":
+                getRandomFarmAnimal(msg);
+                break;
+            case "octo":
+                getRandomOctopus(msg);
+                break;
+            case "dino":
+                horza(msg);
+                break;*/
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
         }

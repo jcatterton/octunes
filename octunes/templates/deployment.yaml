@@ -14,15 +14,38 @@ spec:
         app: {{ .Values.name }}
     spec:
       containers:
-        - name: {{ .Values.name }}
+        - name: {{ .Values.config.cephalopad }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
             - mountPath: /usr/src/config.json
               subPath: config.json
-              name: config
+              name: config-cephalopad
+              readOnly: true
+        - name: {{ .Values.config.citizen }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /usr/src/config.json
+              subPath: config.json
+              name: config-citizen
+              readOnly: true
+        - name: {{ .Values.config.starworld }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /usr/src/config.json
+              subPath: config.json
+              name: config-starworld
               readOnly: true
       volumes:
-        - name: config
+        - name: config-cephalopad
           secret:
-            secretName: {{ .Values.name }}
+            secretName: {{ .Values.config.cephalopad }}
+        - name: config-citizen
+          secret:
+            secretName: {{ .Values.config.citizen }}
+        - name: config-starworld
+          secret:
+            secretName: {{ .Values.config.starworld }}
+
