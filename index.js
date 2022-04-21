@@ -1,9 +1,15 @@
-const discord = require('discord.js');
+const { Client, Intents } = require('discord.js');
 const config = require('./config.json');
 
 const { handleMessage } = require('./pkg/msg-handler');
 
-const bot = new discord.Client();
+const bot = new Client({ intents: [
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_MEMBERS,
+    Intents.FLAGS.GUILD_VOICE_STATES,
+    Intents.FLAGS.DIRECT_MESSAGES
+]});
 const token = config.TOKEN;
 
 let servers = {};
