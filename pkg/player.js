@@ -1,12 +1,16 @@
-const { isValidHttpUrl, log, convertSecondsToMinutes, sendChannelMessageAndLog } = require("./utilities");
+const { isValidHttpUrl, log, convertSecondsToMinutes, sendChannelMessageAndLog, getSpotifyToken } = require("./utilities");
 
 const ytSearch = require("yt-search");
 const ytpl = require('ytpl');
 const ytdl = require("ytdl-core");
 const ytmpl = require('yt-mix-playlist');
+const Spotify = require('spotify-web-api-node');
 
 const config = require("../config.json");
 const allowedVoiceChannels = config.ALLOWED_VOICE_CHANNELS.split(",");
+const spotifyRefreshToken = config.SPOTIFY_REFRESH_TOKEN;
+const spotifyAuth = config.SPOTIFY_AUTH;
+const spotifyApi = new Spotify();
 
 let startTimeOfCurrentSong;
 let nowPlaying;
@@ -49,13 +53,17 @@ function playSong(bot, msg, args, server, mix) {
                 if (!mix) {
                     server.mix = [];
                     server.mixIndex = -1;
-                    addToQueue(bot, msg, server, response.videos[0].url, true, null);
+                    addToQueue(bot, msg, server, response.videos[0].url, true, null, true);
                 } else {
                     ytmpl(response.videos[0].videoId).then(res => {
                         sendChannelMessageAndLog(msg, "Fetching mix", "Fetching mix");
+                        if (!res.items) {
+                            sendChannelMessageAndLog(msg, "Unable to fetch mix :(", "Error fetching mix");
+                            return;
+                        }
                         server.mix = res.items;
                         server.mixIndex = 0;
-                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null)
+                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null, true)
                     });
                 }
             }, err => {
@@ -63,31 +71,85 @@ function playSong(bot, msg, args, server, mix) {
             }
         );
     } else {
-        if (songLink.includes("/playlist")) {
+        if (songLink.includes("open.spotify.com")) {
+            getSpotifyToken(spotifyRefreshToken, spotifyAuth).then(response => {
+                spotifyApi.setAccessToken(response.access_token);
+
+                if (songLink.includes("/playlist")) {
+                    const playListId = songLink.split("/playlist/")[1].split("?si=")[0];
+                    spotifyApi.getPlaylistTracks(playListId).then(r => {
+                        let tracks = [];
+                        tracks = tracks.concat(r.body.items);
+                        const p = [];
+                        let i = 1;
+
+                        while (i * 100 < r.body.total) {
+                            p.push(spotifyApi.getPlaylistTracks(playListId, {offset: i * 100}).then(r => {
+                                tracks = tracks.concat(r.body.items);
+                            }));
+                            i++;
+                        }
+
+                        Promise.all(p).then(() => {
+                            if (tracks.length > 30) {
+                                sendChannelMessageAndLog(msg, "Woah there buddy, that's a pretty big playlist. I'll add all " + tracks.length + " to queue, but it might take a minute or two.")
+                            } else {
+                                sendChannelMessageAndLog(msg, "Adding " + tracks.length + " songs to queue, please wait", "Adding playlist to queue");
+                            }
+
+                            const searchPromises = [];
+                            const links = [];
+                            tracks.forEach(t => {
+                                searchPromises.push(ytSearch.search(t.track.artists[0].name + " " + t.track.name).then(
+                                    response => {
+                                        if (response.videos !== []) {
+                                            links.push(response.videos[0].url);
+                                        }
+                                    }));
+                            });
+
+                            Promise.all(searchPromises).then(() => {
+                                sendChannelMessageAndLog(msg, "Almost there...", null);
+                                server.mix = [];
+                                server.mixIndex = -1;
+                                addPlaylistToQueue(bot, msg, server, links, null);
+                            });
+                        });
+                    })
+                } else if (songLink.includes("/track")) {
+                    const trackId = songLink.split("/track/")[1].split("?si=")[0];
+                    spotifyApi.getTrack(trackId).then(r => {
+                       playSong(bot, msg, r.body.name + " " + r.body.artists[0].name, server, mix);
+                    });
+                }
+            });
+        } else if (songLink.includes("/playlist")) {
             ytpl(songLink.split("list=")[1]).then(res => {
 
-                sendChannelMessageAndLog(msg, "Adding " + res.items.length + " songs to queue, this may take a minute", "Adding playlist to queue");
-
-                for (let i = 0; i < res.items.length; i++) {
-                    addToQueue(bot, msg, server, res.items[i].url, false, null);
+                if (res.items.length > 30) {
+                    sendChannelMessageAndLog(msg, "Woah there buddy, that's a pretty big playlist. I'll add all " + res.items.length + " to queue, but it might take a minute or two.")
+                } else {
+                    sendChannelMessageAndLog(msg, "Adding " + res.items.length + " songs to queue, please wait", "Adding playlist to queue");
                 }
+
+                addPlaylistToQueue(bot, msg, server, res.items.map(function(i) {
+                    return (i.url);
+                }), null);
             }, () => {
                 sendChannelMessageAndLog(msg, "I wasn't able to fetch that playlist. Remember that I cannot play private playlists, and I also cannot play mixes with this command, only discrete playlists. If you want to listen to a mix, try the '!mix' followed by a link or song name.", "Error fetching playlist");
             })
-        }
-
-        else {
+        } else {
             if (!mix) {
                 server.mix = []
                 server.mixIndex = -1
-                addToQueue(bot, msg, server, songLink, true, null);
+                addToQueue(bot, msg, server, songLink, true, null, true);
             } else {
                 ytdl.getInfo(songLink).then(res => {
                     ytmpl(res.videoDetails.videoId).then(r => {
                         sendChannelMessageAndLog(msg, "Fetching mix", "Fetching mix");
                         server.mix = r.items;
                         server.mixIndex = 0;
-                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null)
+                        addToQueue(bot, msg, server, server.mix[server.mixIndex].url, false, null, true)
                     });
                 });
             }
@@ -95,8 +157,28 @@ function playSong(bot, msg, args, server, mix) {
     }
 }
 
-function addToQueue(bot, msg, server, songLink, echo, c) {
-    ytdl.getInfo(songLink).then(
+function addPlaylistToQueue(bot, msg, server, playlist, c) {
+    promises = [];
+
+    playlist.forEach(song => {
+        promises.push(addToQueue(bot, msg, server, song, false, c, false))
+    });
+
+    Promise.all(promises).then(() => {
+        if (bot.voice.connections?.size === 0) {
+            bot.channels.cache.get(msg.member.voice.channel.id).join().then(function (connection) {
+                play(connection, msg, server, bot);
+            }, err => {
+                log("Error joining voice channel: " + err, null);
+            });
+        } else if (connection) {
+            play(connection, msg, server, bot);
+        }
+    });
+}
+
+function addToQueue(bot, msg, server, songLink, echo, connection, connect) {
+    return ytdl.getInfo(songLink).then(
         response => {
             server.queue.push(
                 {
@@ -134,27 +216,31 @@ function addToQueue(bot, msg, server, songLink, echo, c) {
                         log("Song added to queue");
                     }
                 }
-            } else {
-                sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
-                nowPlaying = server.queue[0];
             }
-
+        }, err => {
+            if (echo) {
+                sendChannelMessageAndLog(msg, "I encountered an error getting info on that song. Try again, it's probably nothing... maybe", "Error adding to queue: " + err);
+            }
+        }
+    ).finally(() => {
+        if (connect) {
             if (bot.voice.connections?.size === 0) {
-                bot.channels.cache.get(msg.member.voice.channel.id).join().then(function(connection) {
+                bot.channels.cache.get(msg.member.voice.channel.id).join().then(function (connection) {
                     play(connection, msg, server, bot);
                 }, err => {
                     log("Error joining voice channel: " + err, null);
                 });
-            } else if (c) {
-                play(c, msg, server, bot);
+            } else if (connection) {
+                play(connection, msg, server, bot);
             }
-        }, err => {
-            sendChannelMessageAndLog(msg, "I encountered an error getting info on that song. Try again, it's probably nothing... maybe", "Error adding to queue: " + err);
         }
-    )
+    });
 }
 
 function play(connection, msg, server, bot) {
+    sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
+    nowPlaying = server.queue[0];
+
     // ts is undefined if there is no timestamp
     const ts = checkForTimestamp(server.queue[0].link);
 
@@ -170,7 +256,6 @@ function play(connection, msg, server, bot) {
             const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
             return format.url;
         } else {
-            console.log(server.queue[0])
             return ytdl(server.queue[0].link, {
                 filter: "audioonly",
                 quality: "highestaudio",
@@ -222,7 +307,7 @@ function play(connection, msg, server, bot) {
 
 function shiftQueue(connection, msg, server, bot, rickRollable) {
     if (server.mixIndex !== -1 && server.mixIndex < server.mix.length) {
-        addToQueue(bot, msg, server, server.mix[++server.mixIndex].url, false, connection);
+        addToQueue(bot, msg, server, server.mix[++server.mixIndex].url, false, connection, true);
         server.queue.shift();
     } else {
         if (server.mixIndex !== -1) {

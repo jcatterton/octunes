@@ -51,7 +51,15 @@ function outputQueue(msg, server) {
             }
         );
         queueReply[0] = ":point_right: " + server.queue[0].title + (server.dispatcher?.paused ? " (Paused)" : " (Now playing)");
-        sendChannelMessageAndLog(msg, queueReply, "queue information sent");
+
+        if (queueReply.length > 30) {
+            for (let i = 0; i < queueReply.length; i += 30) {
+                const chunk = queueReply.slice(i, i + 30);
+                sendChannelMessageAndLog(msg, chunk, "queue information sent");
+            }
+        } else {
+            sendChannelMessageAndLog(msg, queueReply, "queue information sent");
+        }
     }
 }
 
@@ -179,6 +187,18 @@ function horza(msg) {
     );
 }
 
+async function getSpotifyToken(refreshToken, authorization) {
+    return fetch('https://accounts.spotify.com/api/token?grant_type=refresh_token&refresh_token=' + refreshToken, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + authorization
+        }
+    }).then(
+        response => response.json()
+    )
+}
+
 module.exports = {
     isValidHttpUrl,
     convertSecondsToMinutes,
@@ -191,5 +211,6 @@ module.exports = {
     getRandomFrog,
     getRandomFarmAnimal,
     getRandomOctopus,
-    horza
+    horza,
+    getSpotifyToken
 }

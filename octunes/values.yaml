@@ -1,7 +1,7 @@
 name: octunes
 image:
-  repository: 172.72.238.79:5000/octunes
-  tag: 2.6.0
+  repository: 192.168.68.108:5000/octunes
+  tag: 2.8.0
   pullPolicy: Always
 resources:
   limits:

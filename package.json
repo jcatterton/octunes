@@ -14,6 +14,7 @@
     "opusscript": "0.0.8",
     "prism-media": "github:hydrabolt/prism-media",
     "snoowrap": "^1.23.0",
+    "spotify-web-api-node": "^5.0.2",
     "youtube-dl-exec": "^2.0.7",
     "youtube-playlist": "^1.0.4",
     "yt-mix-playlist": "^0.1.2-b.2",

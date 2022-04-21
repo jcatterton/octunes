@@ -1,8 +1,10 @@
 const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move } = require("./player");
-const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, horza } = require("./utilities");
+const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, horza, getSpotifyToken } = require("./utilities");
 
 const config = require("../config.json");
 const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
+const spotifyRefreshToken = config.SPOTIFY_REFRESH_TOKEN;
+const spotifyAuth = config.SPOTIFY_AUTH;
 
 const fs = require('fs');
 require.extensions['.txt'] = function (module, filename) {
@@ -50,15 +52,6 @@ function handleMessage(bot, servers, server, msg) {
                 }
                 sendChannelMessageAndLog(msg, "Skipping song", "Song skipped");
                 break;
-            /*case "skip mix":
-            case "skm":
-                server.mix = [];
-                server.mixIndex = -1;
-                if (server.dispatcher) {
-                    server.dispatcher.resume();
-                    server.dispatcher.end();
-                }
-                break;*/
             case "st":
             case "stop":
                 if (bot.voice.connections.size > 0) {
@@ -172,6 +165,9 @@ function handleMessage(bot, servers, server, msg) {
             case "dino":
                 horza(msg);
                 break;*/
+            case "spotify":
+                getSpotifyToken(spotifyRefreshToken, spotifyAuth)
+                break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
         }
