@@ -91,29 +91,11 @@ function playSong(bot, msg, args, server, mix) {
                         }
 
                         Promise.all(p).then(() => {
-                            if (tracks.length > 30) {
-                                sendChannelMessageAndLog(msg, "Woah there buddy, that's a pretty big playlist. I'll add all " + tracks.length + " to queue, but it might take a minute or two.")
-                            } else {
-                                sendChannelMessageAndLog(msg, "Adding " + tracks.length + " songs to queue, please wait", "Adding playlist to queue");
-                            }
+                            sendChannelMessageAndLog(msg, "Adding " + tracks.length + " songs to queue.", "Adding playlist to queue");
 
-                            const searchPromises = [];
-                            const links = [];
-                            tracks.forEach(t => {
-                                searchPromises.push(ytSearch.search(t.track.artists[0].name + " " + t.track.name).then(
-                                    response => {
-                                        if (response.videos !== []) {
-                                            links.push(response.videos[0].url);
-                                        }
-                                    }));
-                            });
-
-                            Promise.all(searchPromises).then(() => {
-                                sendChannelMessageAndLog(msg, "Almost there...", null);
-                                server.mix = [];
-                                server.mixIndex = -1;
-                                addPlaylistToQueue(bot, msg, server, links, null);
-                            });
+                            server.mix = [];
+                            server.mixIndex = -1;
+                            addPlaylistToQueue(bot, msg, server, tracks, null);
                         });
                     })
                 } else if (songLink.includes("/track")) {
@@ -126,11 +108,7 @@ function playSong(bot, msg, args, server, mix) {
         } else if (songLink.includes("/playlist")) {
             ytpl(songLink.split("list=")[1]).then(res => {
 
-                if (res.items.length > 30) {
-                    sendChannelMessageAndLog(msg, "Woah there buddy, that's a pretty big playlist. I'll add all " + res.items.length + " to queue, but it might take a minute or two.")
-                } else {
-                    sendChannelMessageAndLog(msg, "Adding " + res.items.length + " songs to queue, please wait", "Adding playlist to queue");
-                }
+                sendChannelMessageAndLog(msg, "Adding " + res.items.length + " songs to queue", "Adding playlist to queue");
 
                 addPlaylistToQueue(bot, msg, server, res.items.map(function(i) {
                     return (i.url);
@@ -178,51 +156,103 @@ function addPlaylistToQueue(bot, msg, server, playlist, c) {
 }
 
 function addToQueue(bot, msg, server, songLink, echo, connection, connect) {
-    return ytdl.getInfo(songLink).then(
-        response => {
-            server.queue.push(
-                {
-                    "title": response.videoDetails.title,
-                    "runTime": response.videoDetails.lengthSeconds,
-                    "link": songLink,
-                    "length": response.videoDetails.lengthSeconds,
-                    "live": response.videoDetails.isLiveContent,
-                    "formats": response.formats
+    if (typeof(songLink) === typeof(" ")) {
+        return ytdl.getInfo(songLink).then(
+            response => {
+                server.queue.push(
+                    {
+                        "title": response.videoDetails.title,
+                        "runTime": response.videoDetails.lengthSeconds,
+                        "link": songLink,
+                        "length": response.videoDetails.lengthSeconds,
+                        "live": response.videoDetails.isLiveContent,
+                        "formats": response.formats
+                    }
+                );
+
+                if (server.queue.length > 1) {
+                    if (server.queue.slice(0, -1).some(s => s.live)) {
+                        const reply = "Song added to queue. One of the songs in queue is a livestream so there is no estimated time until played."
+                        if (echo) {
+                            sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                        } else {
+                            log("Song added to queue")
+                        }
+                    } else {
+                        let totalQueueLength = 0;
+                        for (let i = 1; i < server.queue.length - 1; i++) {
+                            totalQueueLength += parseInt(server.queue[i].runTime, 10);
+                        }
+                        totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000) - startingTimestamp;
+
+                        const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
+                            "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
+                            convertSecondsToMinutes(totalQueueLength));
+
+                        if (echo) {
+                            sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                        } else {
+                            log("Song added to queue");
+                        }
+                    }
                 }
-            );
-
-            if (server.queue.length > 1) {
-                if (server.queue.slice(0, -1).some(s => s.live)) {
-                    const reply = "Song added to queue. One of the songs in queue is a livestream so there is no estimated time until played."
-                    if (echo) {
-                        sendChannelMessageAndLog(msg, reply, "Song added to queue");
-                    } else {
-                        log("Song added to queue")
-                    }
-                } else {
-                    let totalQueueLength = 0;
-                    for (let i = 1; i < server.queue.length - 1; i++) {
-                        totalQueueLength += parseInt(server.queue[i].runTime, 10);
-                    }
-                    totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000) - startingTimestamp;
-
-                    const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
-                        "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
-                        convertSecondsToMinutes(totalQueueLength));
-
-                    if (echo) {
-                        sendChannelMessageAndLog(msg, reply, "Song added to queue");
-                    } else {
-                        log("Song added to queue");
-                    }
+            }, err => {
+                if (echo) {
+                    sendChannelMessageAndLog(msg, "I encountered an error getting info on that song. Try again, it's probably nothing... maybe", "Error adding to queue: " + err);
                 }
             }
-        }, err => {
-            if (echo) {
-                sendChannelMessageAndLog(msg, "I encountered an error getting info on that song. Try again, it's probably nothing... maybe", "Error adding to queue: " + err);
+        ).finally(() => {
+            if (connect) {
+                if (bot.voice.connections?.size === 0) {
+                    bot.channels.cache.get(msg.member.voice.channel.id).join().then(function (connection) {
+                        play(connection, msg, server, bot);
+                    }, err => {
+                        log("Error joining voice channel: " + err, null);
+                    });
+                } else if (connection) {
+                    play(connection, msg, server, bot);
+                }
+            }
+        });
+    } else {
+        server.queue.push(
+            {
+                "title": songLink.track.name,
+                "runTime": songLink.track.duration_ms/1000,
+                "query": songLink.track.name + " " + songLink.track.artists[0].name,
+                "length": songLink.track.duration_ms/1000,
+                "live": false,
+                "formats": null
+            }
+        );
+
+        if (server.queue.length > 1) {
+            if (server.queue.slice(0, -1).some(s => s.live)) {
+                const reply = "Song added to queue. One of the songs in queue is a livestream so there is no estimated time until played."
+                if (echo) {
+                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                } else {
+                    log("Song added to queue")
+                }
+            } else {
+                let totalQueueLength = 0;
+                for (let i = 1; i < server.queue.length - 1; i++) {
+                    totalQueueLength += parseInt(server.queue[i].runTime, 10);
+                }
+                totalQueueLength += (server.queue[0].length - (Date.now() - startTimeOfCurrentSong) / 1000) - startingTimestamp;
+
+                const reply = (server.queue[server.queue.length - 1].title + " added to queue. There are " +
+                    "currently " + (server.queue.length - 1) + " songs ahead of it, and it will play in approximately " +
+                    convertSecondsToMinutes(totalQueueLength));
+
+                if (echo) {
+                    sendChannelMessageAndLog(msg, reply, "Song added to queue");
+                } else {
+                    log("Song added to queue");
+                }
             }
         }
-    ).finally(() => {
+
         if (connect) {
             if (bot.voice.connections?.size === 0) {
                 bot.channels.cache.get(msg.member.voice.channel.id).join().then(function (connection) {
@@ -234,75 +264,150 @@ function addToQueue(bot, msg, server, songLink, echo, connection, connect) {
                 play(connection, msg, server, bot);
             }
         }
-    });
+    }
 }
 
 function play(connection, msg, server, bot) {
-    sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
-    nowPlaying = server.queue[0];
+    if (!server.queue[0].link) {
+        ytSearch.search(server.queue[0].query).then(
+            response => {
+                server.queue[0].link = response.videos[0].url;
+                server.queue[0].formats = response.formats;
 
-    // ts is undefined if there is no timestamp
-    const ts = checkForTimestamp(server.queue[0].link);
+                sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
+                nowPlaying = server.queue[0];
 
-    if (!ts) {
-        startingTimestamp = 0;
+                // ts is undefined if there is no timestamp
+                const ts = checkForTimestamp(server.queue[0].link);
+
+                if (!ts) {
+                    startingTimestamp = 0;
+                } else {
+                    startingTimestamp = ts;
+                }
+                timeSpentPaused = 0;
+
+                const stream = () => {
+                    if (server.queue[0].live) {
+                        const format = ytdl.chooseFormat(server.queue[0].formats, {quality: [128, 127, 120, 96, 95, 94, 93]});
+                        return format.url;
+                    } else {
+                        return ytdl(server.queue[0].link, {
+                            filter: "audioonly",
+                            quality: "highestaudio",
+                            highWaterMark: 1 << 25
+                        });
+                    }
+                }
+                server.dispatcher = connection.play(stream(), {seek: (ts && !isNaN(ts)) ? ts : 0});
+
+                bot.user.setPresence({
+                    status: 'online',
+                    activity: {
+                        name: server.queue[0].title,
+                        type: 'PLAYING',
+                        url: server.queue[0].link
+                    }
+                });
+
+                startTimeOfCurrentSong = Date.now();
+
+                server.dispatcher.on("finish", () => {
+                    shiftQueue(connection, msg, server, bot, true);
+                });
+
+                server.dispatcher.on("error", err => {
+                    sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+                    const temp = server.queue;
+                    server.queue = [null, server.queue[0]];
+                    server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+                    for (let i = 1; i < temp.length; i++) {
+                        server.queue.push(temp[i]);
+                    }
+                    shiftQueue(connection, msg, server, bot, false);
+                    console.trace();
+                });
+
+                server.dispatcher.player.on("error", err => {
+                    sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+                    const temp = server.queue;
+                    server.queue = [null, server.queue[0]];
+                    server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+                    for (let i = 1; i < temp.length; i++) {
+                        server.queue.push(temp[i]);
+                    }
+                    shiftQueue(connection, msg, server, bot, false);
+                    console.trace();
+                });
+            }
+        )
     } else {
-        startingTimestamp = ts;
-    }
-    timeSpentPaused = 0;
+        sendChannelMessageAndLog(msg, "Now playing " + server.queue[0].title, "Now playing song");
+        nowPlaying = server.queue[0];
 
-    const stream = () => {
-        if (server.queue[0].live) {
-            const format = ytdl.chooseFormat(server.queue[0].formats, { quality: [128,127,120,96,95,94,93] });
-            return format.url;
+        // ts is undefined if there is no timestamp
+        const ts = checkForTimestamp(server.queue[0].link);
+
+        if (!ts) {
+            startingTimestamp = 0;
         } else {
-            return ytdl(server.queue[0].link, {
-                filter: "audioonly",
-                quality: "highestaudio",
-                highWaterMark: 1 << 25
-            });
+            startingTimestamp = ts;
         }
+        timeSpentPaused = 0;
+
+        const stream = () => {
+            if (server.queue[0].live) {
+                const format = ytdl.chooseFormat(server.queue[0].formats, {quality: [128, 127, 120, 96, 95, 94, 93]});
+                return format.url;
+            } else {
+                return ytdl(server.queue[0].link, {
+                    filter: "audioonly",
+                    quality: "highestaudio",
+                    highWaterMark: 1 << 25
+                });
+            }
+        }
+        server.dispatcher = connection.play(stream(), {seek: (ts && !isNaN(ts)) ? ts : 0});
+
+        bot.user.setPresence({
+            status: 'online',
+            activity: {
+                name: server.queue[0].title,
+                type: 'PLAYING',
+                url: server.queue[0].link
+            }
+        });
+
+        startTimeOfCurrentSong = Date.now();
+
+        server.dispatcher.on("finish", () => {
+            shiftQueue(connection, msg, server, bot, true);
+        });
+
+        server.dispatcher.on("error", err => {
+            sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+            const temp = server.queue;
+            server.queue = [null, server.queue[0]];
+            server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+            for (let i = 1; i < temp.length; i++) {
+                server.queue.push(temp[i]);
+            }
+            shiftQueue(connection, msg, server, bot, false);
+            console.trace();
+        });
+
+        server.dispatcher.player.on("error", err => {
+            sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
+            const temp = server.queue;
+            server.queue = [null, server.queue[0]];
+            server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
+            for (let i = 1; i < temp.length; i++) {
+                server.queue.push(temp[i]);
+            }
+            shiftQueue(connection, msg, server, bot, false);
+            console.trace();
+        });
     }
-    server.dispatcher = connection.play(stream(), { seek: (ts && !isNaN(ts)) ? ts : 0 });
-
-    bot.user.setPresence({
-        status: 'online',
-        activity: {
-            name: server.queue[0].title,
-            type: 'PLAYING',
-            url: server.queue[0].link
-        }
-    });
-
-    startTimeOfCurrentSong = Date.now();
-
-    server.dispatcher.on("finish", () => {
-        shiftQueue(connection, msg, server, bot, true);
-    });
-
-    server.dispatcher.on("error", err => {
-        sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
-        const temp = server.queue;
-        server.queue = [null, server.queue[0]];
-        server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
-        for (let i = 1; i < temp.length; i++) {
-            server.queue.push(temp[i]);
-        }
-        shiftQueue(connection, msg, server, bot, false);
-        console.trace();
-    });
-
-    server.dispatcher.player.on("error", err => {
-        sendChannelMessageAndLog(msg, "Error during playback, attempting to continue...", "Error occurred during playback: " + err);
-        const temp = server.queue;
-        server.queue = [null, server.queue[0]];
-        server.queue[1].link = server.queue[1].link.split("t=")[0] + "&t=" + (nowPlaying.length - (getRemainingTime(server) - startingTimestamp)) + "s";
-        for (let i = 1; i < temp.length; i++) {
-            server.queue.push(temp[i]);
-        }
-        shiftQueue(connection, msg, server, bot, false);
-        console.trace();
-    });
 }
 
 function shiftQueue(connection, msg, server, bot, rickRollable) {
