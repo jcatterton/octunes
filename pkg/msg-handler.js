@@ -1,5 +1,6 @@
-const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move } = require("./player");
+const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move, stop } = require("./player");
 const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, horza, getSpotifyToken } = require("./utilities");
+const { runTests } = require("./tests");
 
 const config = require("../config.json");
 const allowedTextChannels = config.ALLOWED_TEXT_CHANNELS.split(",");
@@ -55,12 +56,7 @@ function handleMessage(bot, servers, server, msg) {
             case "st":
             case "stop":
                 if (bot.voice.connections.size > 0) {
-                    server.queue = [];
-                    server.mix = [];
-                    server.mixIndex = -1;
-                    server.dispatcher.resume();
-                    server.dispatcher.end();
-                    server.dispatcher = null;
+                    stop(bot, server, bot.voice.connections.array()[0])
                     sendChannelMessageAndLog(msg, "Stopping playback and purging queue", "Queue purged");
                 }
                 break;
@@ -165,8 +161,10 @@ function handleMessage(bot, servers, server, msg) {
             case "dino":
                 horza(msg);
                 break;*/
-            case "spotify":
-                getSpotifyToken(spotifyRefreshToken, spotifyAuth)
+            case "test":
+                if (msg.author.id === "316005270423732227") {
+                    runTests(msg, bot);
+                }
                 break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);

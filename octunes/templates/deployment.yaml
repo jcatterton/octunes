@@ -24,8 +24,8 @@ spec:
               readOnly: true
           resources:
             limits:
-              memory: 2048Mi
-              cpu: 1000m
+              memory: 1024Mi
+              cpu: 200m
         - name: {{ .Values.config.citizen }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -36,8 +36,8 @@ spec:
               readOnly: true
           resources:
             limits:
-              memory: 2048Mi
-              cpu: 1000m
+              memory: 1024Mi
+              cpu: 200m
         - name: {{ .Values.config.starworld }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -48,8 +48,8 @@ spec:
               readOnly: true
           resources:
             limits:
-              memory: 2048Mi
-              cpu: 1000m
+              memory: 1024Mi
+              cpu: 200m
       volumes:
         - name: config-cephalopad
           secret:
