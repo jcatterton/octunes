@@ -1,13 +1,15 @@
+const {joinVoiceChannel} = require("@discordjs/voice");
+
 function runTests(msg, bot) {
     const promises = [
         () => promiseCreator(1, 5000, ping, msg),
-        () => promiseCreator(2, 5000, joinVoice, msg, bot),
+        () => promiseCreator(2, 5000, joinVoice, msg),
         () => promiseCreator(3, 5000, addSpotifyPlaylist, msg),
         () => promiseCreator(4, 5000, getQueue, msg),
         () => promiseCreator(5, 5000, pause, msg),
         () => promiseCreator(6, 5000, resume, msg),
         () => promiseCreator(7, 5000, skip, msg),
-        () => promiseCreator(8, 15000, joinVoice, msg, bot),
+        () => promiseCreator(8, 15000, joinVoice, msg),
         () => promiseCreator(9, 5000, searchSong, msg, bot),
         () => promiseCreator(10, 5000, searchSong, msg, bot),
         () => promiseCreator(11, 5000, searchSong, msg, bot),
@@ -25,23 +27,23 @@ function runTests(msg, bot) {
         () => promiseCreator(23, 5000, getQueue, msg),
         () => promiseCreator(24, 5000, nowPlaying, msg),
         () => promiseCreator(25, 5000, stop, msg),
-        () => promiseCreator(26, 15000, joinVoice, msg, bot),
+        () => promiseCreator(26, 15000, joinVoice, msg),
         () => promiseCreator(27, 5000, addYoutubeLink, msg),
         () => promiseCreator(28, 5000, nowPlaying, msg),
         () => promiseCreator(29, 5000, stop, msg),
-        () => promiseCreator(30, 15000, joinVoice, msg, bot),
+        () => promiseCreator(30, 15000, joinVoice, msg),
         () => promiseCreator(31, 5000, addSpotifyLink, msg),
         () => promiseCreator(32, 5000, nowPlaying, msg),
         () => promiseCreator(33, 5000, stop, msg),
-        () => promiseCreator(34, 15000, joinVoice, msg, bot),
+        () => promiseCreator(34, 15000, joinVoice, msg),
         () => promiseCreator(35, 5000, mix, msg),
         () => promiseCreator(36, 5000, getQueue, msg),
         () => promiseCreator(37, 5000, stop, msg),
-        () => promiseCreator(38, 15000, joinVoice, msg, bot),
+        () => promiseCreator(38, 15000, joinVoice, msg),
         () => promiseCreator(39, 5000, mix, msg, "https://www.youtube.com/watch?v=5abamRO41fE"),
         () => promiseCreator(40, 5000, getQueue, msg),
         () => promiseCreator(41, 5000, stop, msg),
-        () => promiseCreator(42, 15000, joinVoice, msg, bot),
+        () => promiseCreator(42, 15000, joinVoice, msg),
         () => promiseCreator(43, 5000, addYoutubePlaylist, msg),
         () => promiseCreator(44, 5000, getQueue, msg),
         () => promiseCreator(45, 5000, stop, msg),
@@ -56,12 +58,12 @@ function ping(msg) {
     msg.channel.send("!ping");
 }
 
-function joinVoice(msg, bot) {
-    if (bot.voice.connections?.size === 0) {
-        bot.channels.cache.get("921486301050585098").join().then(() => {
-            msg.channel.send("reconnected")
-        });
-    }
+function joinVoice(msg) {
+    joinVoiceChannel({
+        channelId: "921486301050585098",
+        guildId: msg.guild.id,
+        adapterCreator: msg.guild.voiceAdapterCreator
+    })
 }
 
 function addSpotifyPlaylist(msg) {

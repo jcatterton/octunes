@@ -1,7 +1,7 @@
 name: octunes
 image:
   repository: 192.168.68.108:5000/octunes
-  tag: 2.12.1
+  tag: 5.1.1
   pullPolicy: Always
 resources:
   limits:
@@ -14,3 +14,4 @@ config:
   cephalopad: octunes-cephalopad
   citizen: octunes-citizen
   starworld: octunes-starworld
+  fugg: octunes-fugg

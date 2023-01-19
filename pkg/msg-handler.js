@@ -1,5 +1,5 @@
-const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move, stop } = require("./player");
-const { log, outputQueue, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, horza, getSpotifyToken } = require("./utilities");
+const { playSong, getNowPlayingInfo, pause, resume, shuffleQueue, bumpSong, swapSongs, move, stop, outputQueue } = require("./player");
+const { log, sendChannelReplyAndLog, sendChannelMessageAndLog, getRandomCat, getRandomDog, getRandomFrog, getRandomFarmAnimal, getRandomOctopus, getRandomDinosaur, getRandomCapybara } = require("./utilities");
 const { runTests } = require("./tests");
 
 const config = require("../config.json");
@@ -18,6 +18,10 @@ const help = require('../text-files/help');
 const prefix = "!"
 
 function handleMessage(bot, servers, server, msg) {
+    if (msg.channel.type === "dm") {
+        handleDirectMessage(bot, servers, server, msg);
+    }
+
     if (!allowedTextChannels.some(chan => chan === (msg.channel.id))) {
         return;
     }
@@ -48,17 +52,14 @@ function handleMessage(bot, servers, server, msg) {
             case "sk":
             case "skip":
                 if (server.dispatcher) {
-                    server.dispatcher.resume();
-                    server.dispatcher.end();
+                    server.dispatcher.emit("skip");
+                } else {
+                    sendChannelMessageAndLog(msg, "There isn't anything playing. :thinking:", "cannot skip if nothing is playing");
                 }
-                sendChannelMessageAndLog(msg, "Skipping song", "Song skipped");
                 break;
             case "st":
             case "stop":
-                if (bot.voice.connections.size > 0) {
-                    stop(bot, server, bot.voice.connections.array()[0])
-                    sendChannelMessageAndLog(msg, "Stopping playback and purging queue", "Queue purged");
-                }
+                stop(msg, bot, server, msg.guild.id);
                 break;
             case "q":
             case "queue":
@@ -143,7 +144,7 @@ function handleMessage(bot, servers, server, msg) {
             case "mv":
                 move(msg, server, args[1], args[2]);
                 break;
-            /*case "pspsps":
+            case "pspsps":
                 getRandomCat(msg);
                 break;
             case "woof":
@@ -158,9 +159,12 @@ function handleMessage(bot, servers, server, msg) {
             case "octo":
                 getRandomOctopus(msg);
                 break;
-            case "dino":
-                horza(msg);
-                break;*/
+            case "rawr":
+                getRandomDinosaur(msg);
+                break;
+            case "capybara":
+                getRandomCapybara(msg);
+                break;
             case "test":
                 if (msg.author.id === "316005270423732227") {
                     runTests(msg, bot);
@@ -168,6 +172,51 @@ function handleMessage(bot, servers, server, msg) {
                 break;
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
+        }
+    }
+}
+
+function handleDirectMessage(bot, servers, server, msg) {
+    if (msg.author.id === "316005270423732227") {
+        let args = msg.content.substring(prefix.length).split(" ")
+        if (msg.content.startsWith(prefix)) {
+            switch (args[0]) {
+                case "sendChannelMessage":
+                    const channelId = args[1];
+                    if (!allowedTextChannels.some(chan => chan === (channelId))) {
+                        return;
+                    }
+
+                    args.shift();
+                    args.shift();
+
+                    bot.channels.cache.get(channelId).send(args.join(" ")).then(() => {
+                        log("sent message", msg);
+                    }, err => {
+                        log("error sending message: " + err, msg);
+                    });
+                    break;
+                case "serverInfo":
+                    const serverID = args[1];
+
+                    if (bot.guilds.cache.get(serverID).channels.cache.map(function(chan) {
+                        return (allowedTextChannels.some(c => c === chan.id))
+                    }).some(a => a === true)) {
+
+                    } else {
+                        return;
+                    }
+
+                    const m = bot.guilds.cache.get(serverID).channels.cache.map(function(chan) {
+                        return (chan.name + " " + chan.type + " " + chan.id);
+                    });
+                    msg.author.send(m).then(() => {
+                        console.log(m);
+                        log("dm sent", msg);
+                    }, err => {
+                        log("error sending dm: " + err, msg);
+                    });
+            }
         }
     }
 }

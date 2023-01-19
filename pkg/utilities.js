@@ -5,8 +5,8 @@ const fs = require('fs');
 require.extensions['.txt'] = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
 };
-const username = require('../text-files/username');
-const password = require('../text-files/password');
+const username = require('../text-files/username.txt');
+const password = require('../text-files/password.txt');
 
 function isValidHttpUrl(string) {
     let url;
@@ -16,6 +16,7 @@ function isValidHttpUrl(string) {
     } catch (_) {
         return false;
     }
+    console.log(url.protocol)
 
     return url.protocol === "http:" || url.protocol === "https:";
 }
@@ -39,28 +40,6 @@ function log(logMessage, msg) {
     msg ?
         console.log(now + " - " + msg + " - " + logMessage) :
         console.log(now + " - " + logMessage);
-}
-
-function outputQueue(msg, server) {
-    if (server.queue.length === 0) {
-        sendChannelMessageAndLog(msg, "This shit empty, YEET!", "queue information sent");
-    } else {
-        const queueReply = server.queue.map(
-            function(i) {
-                return (server.queue.indexOf(i) + ". " + i.title);
-            }
-        );
-        queueReply[0] = ":point_right: " + server.queue[0].title + (server.dispatcher?.paused ? " (Paused)" : " (Now playing)");
-
-        if (queueReply.length > 30) {
-            for (let i = 0; i < queueReply.length; i += 30) {
-                const chunk = queueReply.slice(i, i + 30);
-                sendChannelMessageAndLog(msg, chunk, "queue information sent");
-            }
-        } else {
-            sendChannelMessageAndLog(msg, queueReply, "queue information sent");
-        }
-    }
 }
 
 async function getRandomCat(msg) {
@@ -118,7 +97,7 @@ async function getRandomFarmAnimal(msg) {
         password: password.replace("\n", "")
     });
 
-    reddit.getSubreddit(animal).getTop({time: 'all'}).then(
+    reddit.getSubreddit(animal).getTop({time: 'all', limit: 200}).then(
         response => {
             const validLinks = response.filter(function(d) {
                 return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
@@ -147,7 +126,7 @@ async function getRandomOctopus(msg) {
         password: password.replace("\n", "")
     });
 
-    reddit.getSubreddit("octopus").getTop({time: 'all'}).then(
+    reddit.getSubreddit("octopus").getTop({time: 'all', limit: 200}).then(
         response => {
             const validLinks = response.filter(function(d) {
                 return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
@@ -166,25 +145,60 @@ async function getRandomOctopus(msg) {
     )
 }
 
-function horza(msg) {
-    const horzas = [
-        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/37/182304549-inset.jpg",
-        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/128/191035008-inset.jpg",
-        "https://render.worldofwarcraft.com/us/character/bleeding-hollow/119/215029111-inset.jpg"
-    ];
+async function getRandomDinosaur(msg) {
+    const reddit = new snoowrap({
+        userAgent: 'put your user-agent string here',
+        clientId: '9UKLWr3gXXfCIxcWv26Zlg',
+        clientSecret: 'oU2xj_RoVSg8Aa8oASUteLIqiKGksQ',
+        username: username.replace("\n", ""),
+        password: password.replace("\n", "")
+    });
 
-    const horzaSounds = [
-        "Eh?",
-        "Was that a healer fuck up?",
-        "3... 2... wait... 3... no... 321!"
-    ];
+    reddit.getSubreddit("CoolDinosaurPictures").getTop({time: 'all', limit: 200}).then(
+        response => {
+            const validLinks = response.filter(function(d) {
+                return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
+            });
 
-    msg.channel.send(
-        horzaSounds[Math.floor(Math.random() * 3)],
-        {
-            files: [horzas[Math.floor(Math.random() * 3)]]
+            const index = Math.floor(Math.random() * validLinks.length);
+
+            msg.channel.send(
+                {
+                    files: [
+                        validLinks[index].url
+                    ]
+                }
+            )
         }
-    );
+    )
+}
+
+function getRandomCapybara(msg) {
+    const reddit = new snoowrap({
+        userAgent: 'put your user-agent string here',
+        clientId: '9UKLWr3gXXfCIxcWv26Zlg',
+        clientSecret: 'oU2xj_RoVSg8Aa8oASUteLIqiKGksQ',
+        username: username.replace("\n", ""),
+        password: password.replace("\n", "")
+    });
+
+    reddit.getSubreddit("capybara").getTop({time: 'all', limit: 200}).then(
+        response => {
+            console.log(response.length)
+            const validLinks = response.filter(function(d) {
+                return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
+            });
+            const index = Math.floor(Math.random() * validLinks.length);
+
+            msg.channel.send(
+                {
+                    files: [
+                        validLinks[index].url
+                    ]
+                }
+            )
+        }
+    )
 }
 
 async function getSpotifyToken(refreshToken, authorization) {
@@ -203,7 +217,6 @@ module.exports = {
     isValidHttpUrl,
     convertSecondsToMinutes,
     log,
-    outputQueue,
     sendChannelReplyAndLog,
     sendChannelMessageAndLog,
     getRandomCat,
@@ -211,6 +224,7 @@ module.exports = {
     getRandomFrog,
     getRandomFarmAnimal,
     getRandomOctopus,
-    horza,
+    getRandomDinosaur,
+    getRandomCapybara,
     getSpotifyToken
 }

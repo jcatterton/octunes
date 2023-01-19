@@ -9,9 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^12.5.3",
+    "@discordjs/opus": "^0.8.0",
+    "@discordjs/voice": "^0.11.0",
+    "discord.js": "^13.3.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "libsodium-wrappers": "^0.7.10",
     "node-fetch": "^2.6.6",
     "opusscript": "0.0.8",
+    "play-dl": "^1.9.5",
     "prism-media": "github:hydrabolt/prism-media",
     "snoowrap": "^1.23.0",
     "spotify-web-api-node": "^5.0.2",
@@ -19,7 +24,7 @@
     "youtube-playlist": "^1.0.4",
     "yt-mix-playlist": "^0.1.2-b.2",
     "yt-search": "^2.10.2",
-    "ytdl-core": "^4.10.1",
+    "ytdl-core": "^4.9.1",
     "ytpl": "^2.3.0"
   }
 }

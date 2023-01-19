@@ -24,32 +24,16 @@ spec:
               readOnly: true
           resources:
             limits:
-              memory: 1024Mi
-              cpu: 200m
-        - name: {{ .Values.config.citizen }}
+              memory: 2048Mi
+              cpu: 800m
+        - name: {{ .Values.config.fugg }}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
             - mountPath: /usr/src/config.json
               subPath: config.json
-              name: config-citizen
+              name: config-fugg
               readOnly: true
-          resources:
-            limits:
-              memory: 1024Mi
-              cpu: 200m
-        - name: {{ .Values.config.starworld }}
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          volumeMounts:
-            - mountPath: /usr/src/config.json
-              subPath: config.json
-              name: config-starworld
-              readOnly: true
-          resources:
-            limits:
-              memory: 1024Mi
-              cpu: 200m
       volumes:
         - name: config-cephalopad
           secret:
@@ -60,4 +44,7 @@ spec:
         - name: config-starworld
           secret:
             secretName: {{ .Values.config.starworld }}
+        - name: config-fugg
+          secret:
+            secretName: {{ .Values.config.fugg }}
 
