@@ -1,23 +1,23 @@
 Octunes help menu
 
-All commands must start with '!'
+Octunes supports slash commands.
 
 Commands:
-- !play or !pl {link} - Plays song from provided youtube link. Supports timestamps and playlist links as well.
-- !play or !pl {keywords} - Searches youtube based on your keywords and plays first result.
-- !mix or !m {link} - Creates a mix of songs based on provided link, mix will continue until a new song is added manually.
-- !mix or !m {keyword} - Creates a mix of songs based on your keywords, mix will continue until a new song is added manually.
-- !skip or !sk - Skips currently playing song.
-- !stop or !st - Stops playback and removes songs from queue.
-- !queue or !q - Lists the current queue of songs.
-- !nowplaying or !np - States the currently playing song.
-- !remove or !rm {index} - Removes a song from the queue, use the index provided by the !queue operation.
-- !pause or !ps - Pauses the currently playing song.
-- !resume or !rs - Resumes the currently playing song, if it is paused.
-- !shuffle or !sh - Shuffles the queue. (There must be at least three songs in queue including the currently playing song)
-- !bump or !b {index} - Moves a song in the queue to position one, use index provided by the !queue operation.
-- !swap or !sw {index_one} {index_two} - Swaps the position of two songs in the queue, use the index provided by the !queue operation.
-- !move or !mv {index_one} {index_two} - Moves a song to a specific position in the queue, use the index provided by the !queue operation.
-- !info or !i - Bot info
+- /play {link} - Plays song from provided youtube link. Supports timestamps and playlist links as well.
+- /play {keywords} - Searches youtube based on your keywords and plays first result.
+- /mix {link} - Creates a mix of songs based on provided link, mix will continue until a new song is added manually.
+- /mix {keyword} - Creates a mix of songs based on your keywords, mix will continue until a new song is added manually.
+- /skip - Skips currently playing song.
+- /stop - Stops playback and removes songs from queue.
+- /queue - Lists the current queue of songs.
+- /now-playing - States the currently playing song.
+- /remove {index} - Removes a song from the queue, use the index provided by the !queue operation.
+- /pause - Pauses the currently playing song.
+- /resume - Resumes the currently playing song, if it is paused.
+- /shuffle - Shuffles the queue. (There must be at least three songs in queue including the currently playing song)
+- /bump - Moves a song in the queue to position one, use index provided by the !queue operation.
+- /swap - Swaps the position of two songs in the queue, use the index provided by the !queue operation.
+- /move - Moves a song to a specific position in the queue, use the index provided by the !queue operation.
+- /info - Bot info
 
 Any bugs? Tell Sova!

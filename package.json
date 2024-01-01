@@ -1,6 +1,6 @@
 {
   "name": "octunes_node",
-  "version": "1.0.0",
+  "version": "5.1.6",
   "description": "Octopals discord music bot",
   "main": "index.js",
   "scripts": {
@@ -9,22 +9,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@discordjs/opus": "^0.8.0",
-    "@discordjs/voice": "^0.11.0",
-    "discord.js": "^13.3.1",
-    "fluent-ffmpeg": "^2.1.2",
-    "libsodium-wrappers": "^0.7.10",
-    "node-fetch": "^2.6.6",
+    "@discordjs/opus": "0.8.0",
+    "@discordjs/voice": "0.11.0",
+    "discord.js": "^14.14.1",
+    "fluent-ffmpeg": "2.1.2",
+    "libsodium-wrappers": "0.7.11",
+    "node-fetch": "2.6.9",
     "opusscript": "0.0.8",
-    "play-dl": "^1.9.5",
+    "play-dl": "1.9.6",
     "prism-media": "github:hydrabolt/prism-media",
-    "snoowrap": "^1.23.0",
-    "spotify-web-api-node": "^5.0.2",
-    "youtube-dl-exec": "^2.0.7",
-    "youtube-playlist": "^1.0.4",
-    "yt-mix-playlist": "^0.1.2-b.2",
-    "yt-search": "^2.10.2",
-    "ytdl-core": "^4.9.1",
-    "ytpl": "^2.3.0"
+    "snoowrap": "1.23.0",
+    "spotify-web-api-node": "5.0.2",
+    "youtube-dl-exec": "2.4.0",
+    "youtube-playlist": "1.0.4",
+    "yt-mix-playlist": "0.1.2-b.2",
+    "yt-search": "2.10.2",
+    "ytdl-core": "4.9.1",
+    "ytpl": "2.3.0"
   }
 }

@@ -13,7 +13,7 @@ sed -i '' -E s/tag:\ [0-9]*\.[0-9]*\.[0-9]*\([-][A-Za-z0-9.-]+\)?/tag:\ ${VERSIO
 sed -i '' -E s/version:\ [0-9]*\.[0-9]*\.[0-9]*\([-][A-Za-z0-9.-]+\)?/version:\ ${VERSION}/g ./${CHART_REF}/Chart.yaml
 
 build() {
-  docker build -f ./docker/Dockerfile -t "192.168.68.108:5000/octunes:${VERSION}" .
+  docker build --platform=linux/amd64 -f ./docker/Dockerfile -t "192.168.68.108:5000/octunes:${VERSION}" .
 }
 
 push() {

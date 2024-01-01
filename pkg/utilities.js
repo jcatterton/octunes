@@ -7,6 +7,7 @@ require.extensions['.txt'] = function (module, filename) {
 };
 const username = require('../text-files/username.txt');
 const password = require('../text-files/password.txt');
+const MessageAttachment = require('discord.js');
 
 function isValidHttpUrl(string) {
     let url;
@@ -16,7 +17,6 @@ function isValidHttpUrl(string) {
     } catch (_) {
         return false;
     }
-    console.log(url.protocol)
 
     return url.protocol === "http:" || url.protocol === "https:";
 }
@@ -43,20 +43,31 @@ function log(logMessage, msg) {
 }
 
 async function getRandomCat(msg) {
-    const { file } = await fetch('https://aws.random.cat/meow').then(response => response.json());
-    await msg.channel.send({
-        files: [{
-            attachment: file
-        }]
-    });
+    await fetch('https://api.thecatapi.com/v1/images/search').then(
+        (response) => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Something went wrong');
+        }
+    ).then(
+        data => {
+            msg.editReply(data[0].url)
+        }
+    )
 }
 
 async function getRandomDog(msg) {
     await fetch('https://dog.ceo/api/breeds/image/random').then(
-        response => response.json()
+        (response) => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Something went wrong');
+        }
     ).then(
         data => {
-            msg.channel.send({files: [data.message]});
+            msg.editReply(data.message);
         }
     )
 }
@@ -69,7 +80,7 @@ async function getRandomFrog(msg) {
         num = "00" + num;
     }
 
-    msg.channel.send({files: ["http://www.allaboutfrogs.org/funstuff/random/" + num + ".jpg"]});
+    msg.editReply("http://www.allaboutfrogs.org/funstuff/random/" + num + ".jpg");
 }
 
 async function getRandomFarmAnimal(msg) {
@@ -184,7 +195,6 @@ function getRandomCapybara(msg) {
 
     reddit.getSubreddit("capybara").getTop({time: 'all', limit: 200}).then(
         response => {
-            console.log(response.length)
             const validLinks = response.filter(function(d) {
                 return (d.url.endsWith(".jpg") || d.url.endsWith(".png"))
             });

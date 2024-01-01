@@ -26,7 +26,11 @@ function handleMessage(bot, servers, server, msg) {
         return;
     }
 
-    if (!servers[msg.guild.id]) {
+    if (msg.content.startsWith(prefix)) {
+        sendChannelMessageAndLog(msg, "Octunes now supports slash commands! My commands should appear automatically if you type '/', you can also try '/help' for a full list of commands.")
+    }
+
+    /*if (!servers[msg.guild.id]) {
         servers[msg.guild.id] = {
             queue: [],
             mix: [],
@@ -43,7 +47,7 @@ function handleMessage(bot, servers, server, msg) {
                 break;
             case "pl":
             case "play":
-                playSong(bot, msg, args, server,false);
+                playSong(bot, msg, args, server, false);
                 break;
             case "m":
             case "mix":
@@ -173,7 +177,7 @@ function handleMessage(bot, servers, server, msg) {
             default:
                 sendChannelReplyAndLog(msg, "I don't recognize that command. Try '!help' if you're having trouble.", "Replied to unrecognized command by " + msg.author);
         }
-    }
+    }*/
 }
 
 function handleDirectMessage(bot, servers, server, msg) {
